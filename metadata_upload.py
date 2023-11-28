@@ -44,12 +44,12 @@ def upload_md(sheet_name, meta_dict, force_append=False, col_match='phys_file_pa
 		if np.sum(matching_cells) <1:
 			entry_row=df.shape[0]+2
 		else:
-			entry_row=matching_cells.argmax()
+			entry_row=matching_cells.argmax()+2
 	for key, value in meta_dict.items():
 		col=df.columns.get_loc(key)+1
 		sheet.update_cell(entry_row, col, value)
 
-test_dict={'bad_name':'good_data'}
+test_dict={'animal_ID':'X0022'}
 
 if __name__ == '__main__':
-	upload_md('animal', test_dict)
+	upload_md('animal', test_dict, force_append=True)

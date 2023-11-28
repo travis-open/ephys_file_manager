@@ -7,6 +7,7 @@ import shutil
 from metadata_upload import *
 from image_gui import *
 from abf_meta import *
+from nwb_info import process_nwb_in_dir
 from pathlib import Path
 from config import src_list
 import subprocess
@@ -212,6 +213,7 @@ class DirectoryGUI(object):
 		phys_file_path=self.active_dir.get()
 		site_dict=self.collect_site_data()
 		upload_md('site', site_dict)
+		save_md('site.json', site_dict)
 		if self.HS0_var.get():
 			cell0_dict={
 			'site_ID': site_ID,
@@ -274,6 +276,8 @@ class DirectoryGUI(object):
 
 		self.sliceIDvar.set('')
 		self.wellIDvar.set('')
+		self.orientationvar.set('')
+
 		self.reset_cell_info()
 		
 		make_new_slice()
@@ -283,6 +287,7 @@ class DirectoryGUI(object):
 		self.directory_level='slice'
 
 	def new_site_up(self):
+		##slice information may have been updated, collect and store
 		slice_dict=self.collect_slice_data()
 		upload_md('slice', slice_dict)
 		slice_json_path=self.slice_directory+r"\slice.json"
@@ -293,8 +298,14 @@ class DirectoryGUI(object):
 			save_md('site.json', site_dict)
 		self.reset_cell_info()
 		make_new_site()
-		self.directory_level='site'
 		self.update_active()
+		site_ID=self.return_site_ID()
+		phys_file_path=self.active_dir.get()
+		site_dict=self.collect_site_data()
+		upload_md('site', site_dict)
+		save_md('site.json', site_dict)
+		self.directory_level='site'
+		
 
 	def collect_day_data(self):
 		day_dict={
@@ -361,6 +372,7 @@ class DirectoryGUI(object):
 		for src in src_list:
 			copy_files_since_tstamp(self.new_dir_time, src, dst)
 		parse_abf_in_dir(dst, site_ID=self.return_site_ID())
+		process_nwb_in_dir()
 
 	def reset_cell_info(self):
 		self.HS0_var.set(0)
