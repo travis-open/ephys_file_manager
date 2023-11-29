@@ -6,10 +6,7 @@ from pycromanager import Core
 import tifffile
 import json
 import time
-
-
-
-
+from config import obj_list, mag_list, ill_list
 
 class ImageGUI(object):
 	def __init__(self, root, parent):
@@ -24,19 +21,19 @@ class ImageGUI(object):
 		self.ObjectiveVar = StringVar()
 		objective = ttk.Combobox(mainframe, textvariable=self.ObjectiveVar, width=5)
 		objective.grid(column=0, row=1)
-		objective['values'] = ('5X', '40X')
-		objective.set('5x')
+		objective['values'] = obj_list
+		objective.set('5X')
 		ttk.Label(mainframe, text='magnifier:').grid(column=1, row=0)
 		self.MagVar = StringVar()
 		mag = ttk.Combobox(mainframe, textvariable=self.MagVar, width=5)
 		mag.grid(column=1, row=1)
-		mag['values'] = ('0.5x', '0.63x', '0.8x', '1.0x', '1.25x', '1.6x', '2.0x', '2.5x', '3.2x', '4.0x')
+		mag['values'] = mag_list
 		mag.set('1.0x')
 		ttk.Label(mainframe, text='illumination:').grid(column=2, row=0)	
 		self.IlluminationVar = StringVar()
 		ill = ttk.Combobox(mainframe, textvariable=self.IlluminationVar, width=5)
 		ill.grid(column=2, row=1)
-		ill['values'] = ('DIC', 'GFP', 'RFP', 'YFP')
+		ill['values'] = ill_list
 		ill.set('DIC')
 
 		objective.bind("<<ComboboxSelected>>", self.update_micromanager)
@@ -44,6 +41,39 @@ class ImageGUI(object):
 		ill.bind("<<ComboboxSelected>>", self.update_micromanager)
 
 		ttk.Button(mainframe, text="capture, save meta", command=self.snap_and_save).grid(column=0, row=2, columnspan=3)
+		root.bind_all('<F5>', self.change_objective)
+		root.bind_all('<F6>', self.change_mag)
+		root.bind_all('<F7>', self.change_illumination)
+
+	def change_illumination(self, event):
+		current_ill=self.IlluminationVar.get()
+		current_index = ill_list.index(current_ill)
+		if current_index<len(ill_list)-1:
+			next_ill=ill_list[current_index+1]
+		else:
+			next_ill=ill_list[0]
+		self.IlluminationVar.set(next_ill)
+		self.update_micromanager(event)
+
+	def change_mag(self, event):
+		current_mag=self.MagVar.get()
+		current_index = mag_list.index(current_mag)
+		if current_index<len(mag_list)-1:
+			next_mag=mag_list[current_index+1]
+		else:
+			next_mag=mag_list[0]
+		self.MagVar.set(next_mag)
+		self.update_micromanager(event)
+
+	def change_objective(self, event):
+		current_obj=self.ObjectiveVar.get()
+		current_index = obj_list.index(current_obj)
+		if current_index<len(obj_list)-1:
+			next_obj=obj_list[current_index+1]
+		else:
+			next_obj=obj_list[0]
+		self.ObjectiveVar.set(next_obj)
+		self.update_micromanager(event)
 
 	def update_micromanager(self, event):
 		obj_val=self.ObjectiveVar.get()
