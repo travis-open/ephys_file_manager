@@ -9,10 +9,9 @@ from image_gui import *
 from abf_meta import *
 from nwb_info import process_nwb_in_dir
 from pathlib import Path
-from config import src_list
+from config import src_list, species_list, project_list, ext_soln_list, brain_region_list, subregion_list, pip_soln_list
 import subprocess
 from notepad import NotepadGUI
-#src_list = [r"C:\pClamp", r"C:\Hamamatsu"] ##places to look for saved experiment files
 
 def make_new_day(base_dir=r"C:\Data", i=0):
 	"""
@@ -102,12 +101,13 @@ class DirectoryGUI(object):
 		self.speciesvar = StringVar()
 		species = ttk.Combobox(mainframe, textvariable=self.speciesvar, width=10)
 		species.grid(column=0,row=6)
-		species['values'] = ('Macaca mulatta', 'Macaca nemestrina', 'Mus muluscus', 'Test cell')
+		species['values'] = species_list
 		
 		ttk.Label(mainframe, text="project:").grid(column=0, row=7)
 		self.projectvar = StringVar()
 		project = ttk.Combobox(mainframe, textvariable=self.projectvar, width=10)
 		project.grid(column=0,row=8)
+		project['values'] = project_list
 
 		base_entry = ttk.Entry(mainframe, textvariable=self.base_dir, width=38)
 		base_entry.grid(column=1, row=0, sticky=(W,E), columnspan=3)
@@ -133,13 +133,13 @@ class DirectoryGUI(object):
 		self.externalIDvar = StringVar()
 		external = ttk.Combobox(mainframe, textvariable=self.externalIDvar, width=10)
 		external.grid(column=2, row=6)
-		external['values'] = ('ACSF','ACSF+kyn+picro')
+		external['values'] = ext_soln_list
 
 		ttk.Label(mainframe, text="region:").grid(column=2, row=7)
 		self.regionVar = StringVar()
 		region = ttk.Combobox(mainframe, textvariable=self.regionVar, width=10)
 		region.grid(column=2, row=8)
-		region['values'] = ('SC', 'MOp')
+		region['values'] = brain_region_list
 
 		ttk.Button(mainframe, text="set base", command=self.base_up).grid(column=4, row=0)
 		
@@ -158,9 +158,8 @@ class DirectoryGUI(object):
 		pipette0_cb.grid(column=3, row=3)
 		pipette1_cb = ttk.Combobox(mainframe, textvariable=self.pip_sol_1, width=5)
 		pipette1_cb.grid(column=3, row=4)
-		pip_sol_list = ('K-Gluc', 'CsCl', 'ACSF')
-		pipette0_cb['values'] = pip_sol_list
-		pipette1_cb['values'] = pip_sol_list
+		pipette0_cb['values'] = pip_soln_list
+		pipette1_cb['values'] = pip_soln_list
 
 		self.subregion_0 = StringVar()
 		self.subregion_1 = StringVar()
@@ -168,7 +167,7 @@ class DirectoryGUI(object):
 		subregion0_cb.grid(column=4, row=3)
 		subregion1_cb = ttk.Combobox(mainframe, textvariable=self.subregion_1, width=5)
 		subregion1_cb.grid(column=4, row=4)
-		subregion_list = ('SCs','SCm','L1', 'L2', 'L3', 'L4', 'L5', 'L6')
+		
 		subregion0_cb['values'] = subregion_list
 		subregion1_cb['values'] = subregion_list
 
