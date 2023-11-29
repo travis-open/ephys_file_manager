@@ -10,13 +10,22 @@ gc = gspread.service_account(filename='mycredentials.json')
 gsheet = gc.open_by_key(gsheet_key)
 
 
+def append_md(filepath, meta_dict):
+	try:
+		with open(filepath) as f:
+			existing_dict=json.load(f)
+		existing_dict.update(meta_dict)
+		with open(filepath, 'w') as f:
+			f.write(json.dumps(existing_dict, indent=4))
+	except:
+		print(f"{filepath} not found")
+		save_md(filepath, meta_dict)
+
 def save_md(filepath, meta_dict):
 	#local_file_name=sheet_name+'.json'
 	with open(filepath, 'a') as f:
 		f.write(json.dumps(meta_dict, indent=4))
 		f.close()
-
-
 
 def upload_md(sheet_name, meta_dict, force_append=False, col_match='phys_file_path'):
 	"""
@@ -52,4 +61,5 @@ def upload_md(sheet_name, meta_dict, force_append=False, col_match='phys_file_pa
 test_dict={'animal_ID':'X0022'}
 
 if __name__ == '__main__':
-	upload_md('animal', test_dict, force_append=True)
+	#upload_md('animal', test_dict, force_append=True)
+	append_md('site.json', {'new5':'data5c'})
