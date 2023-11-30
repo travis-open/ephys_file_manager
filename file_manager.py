@@ -75,6 +75,8 @@ def make_new_site(i=0):
 		i+=1
 		make_new_site(i)
 
+animal_ID_list = fetch_existing_values('animal', 'animal_ID')
+
 class DirectoryGUI(object):
 	def __init__(self, root):
 		self.root=root
@@ -96,6 +98,7 @@ class DirectoryGUI(object):
 		self.animalIDvar = StringVar()
 		animalID = ttk.Combobox(mainframe, textvariable=self.animalIDvar, width=10)
 		animalID.grid(column=0, row=4)
+		animalID['values'] = animal_ID_list
 
 		ttk.Label(mainframe, text="species:").grid(column=0, row=5)
 		self.speciesvar = StringVar()
@@ -260,6 +263,8 @@ class DirectoryGUI(object):
 			day_json_path=self.day_directory+r"\day.json"
 			upload_md('day', day_dict)
 			append_md(day_json_path, day_dict)
+			animal_dict = self.collect_animal_data()
+			upload_md('animal', animal_dict, col_match='animal_ID')
 		
 		if self.directory_level=='slice':
 			slice_dict=self.collect_slice_data()
@@ -316,6 +321,13 @@ class DirectoryGUI(object):
 		'project': self.projectvar.get()
 		}
 		return day_dict
+
+	def collect_animal_data(self):
+		animal_dict={
+		'animal_ID': self.animalIDvar.get(),
+		'species': self.speciesvar.get(),
+		}
+		return animal_dict
 	
 	def collect_slice_data(self):
 		slice_ID=self.return_slice_ID()

@@ -10,7 +10,13 @@ gc = gspread.service_account(filename='mycredentials.json')
 gsheet = gc.open_by_key(gsheet_key)
 
 
+
 def append_md(filepath, meta_dict):
+	"""
+	Save metadata as a json to the indicated file path. 
+	Check if file exists. If so, append and update.
+	Otherwise, create new json
+	"""
 	try:
 		with open(filepath) as f:
 			existing_dict=json.load(f)
@@ -22,7 +28,6 @@ def append_md(filepath, meta_dict):
 		save_md(filepath, meta_dict)
 
 def save_md(filepath, meta_dict):
-	#local_file_name=sheet_name+'.json'
 	with open(filepath, 'a') as f:
 		f.write(json.dumps(meta_dict, indent=4))
 		f.close()
@@ -55,8 +60,17 @@ def upload_md(sheet_name, meta_dict, force_append=False, col_match='phys_file_pa
 		else:
 			entry_row=matching_cells.argmax()+2
 	for key, value in meta_dict.items():
-		col=df.columns.get_loc(key)+1
-		sheet.update_cell(entry_row, col, value)
+		if value != '': ##don't overwrite existing data with missing data
+			col=df.columns.get_loc(key)+1
+			sheet.update_cell(entry_row, col, value)
+
+def fetch_existing_values(sheet_name, col_name):
+	"""
+	Find existing entries for a given sheet and column. e.g. animal_ID's.
+	"""
+	sheet = gsheet.worksheet(sheet_name)
+	df = pd.DataFrame(sheet.get_all_records())
+	return list(df[col_name].unique())
 
 test_dict={'animal_ID':'X0022'}
 
