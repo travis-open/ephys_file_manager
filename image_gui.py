@@ -7,7 +7,7 @@ import tifffile
 import json
 import time
 from config import obj_list, mag_list, ill_list
-from umanager import core
+from umanager import core, studio
 
 class ImageGUI(object):
 	def __init__(self, root, parent):
@@ -100,6 +100,9 @@ class ImageGUI(object):
 
 	def snap_and_save(self):#, manual_meta_dict={}):
 		active_directory = self.parent.active_dir.get()
+		##can't snap if live mode is on. Check current mode, stop, snap, reset mode
+		live_mode = studio.live().get_is_live_mode_on()
+		studio.live().set_live_mode(False)
 		self.core.snap_image()
 		tagged_image=self.core.get_tagged_image()
 		image_height = tagged_image.tags['Height']
@@ -114,7 +117,7 @@ class ImageGUI(object):
 		with open(active_dir/jsonfile, 'a') as f:
 			f.write(json.dumps(md, indent=4))
 			f.close()
-
+		studio.live().set_live_mode(live_mode)
 		self.im_md_up(str(active_dir/tfile))
 
 	def camera_button_func(self):

@@ -1,4 +1,4 @@
-from pycromanager import Core, JavaObject
+from pycromanager import Core, JavaObject, Studio
 import tifffile
 import json
 import time
@@ -7,6 +7,7 @@ from igor import IgorZmq
 
 core = Core()
 igor = IgorZmq()
+studio = Studio()
 
 images_1d = JavaObject('java.util.ArrayList')
 
@@ -28,21 +29,22 @@ def dmd_prep(image_seq, stim_amp=50, stim_duration=50000):
 	t1, t2, t3 = 1000, stim_duration, 0 #t1 = 1000 us, time for shutter to wait after recieving trigger 
 	##t3 use in future for trains
 	i1, i2, i3 = 0, stim_amp, 0
+	repeatCnt = 1
 	next_sweep = igor.get_next_sweep()
 	stim_id=0
-	param_list = [t1, t2, t3, i1, i2, i3, next_sweep, stim_id]
+	param_list = [t1, t2, t3, i1, i2, i3, repeatCnt, next_sweep, stim_id]
 	shutter_list=["t1", "t2", "t3", "i1", "i2", "i3"]
-	param_name_list = ["t1", "t2", "t3", "i1", "i2", "i3", "sweep", "stim_id"]
+	param_name_list = ["t1", "t2", "t3", "i1", "i2", "i3", "repeatCnt", "sweep", "stim_id"]
 	stim_dict = {param_name_list[i]: param_list[i] for i in range(len(param_name_list))}
+	core.set_property(sd, "channel", 1)
 	for k, v in stim_dict.items():
 		if k in shutter_list:
 			core.set_property(sd, k, v)
 
-	igor.dmd_ephys_prep()
-	
-	core.stop_slm_sequence(dmd_name)
-	core.set_property(sd, "channel", 1)
 	core.set_property(sd, "mode", "TRIGGER")
+	igor.dmd_ephys_prep()
+	core.stop_slm_sequence(dmd_name)
+	core.set_property(dmd_name, "repeatCnt", repeatCnt)
 	core.set_property(dmd_name,"CommandTrigger",0)
 	core.set_property(dmd_name,"TriggerType",3)
 	core.load_slm_sequence(dmd_name, images_1d)
