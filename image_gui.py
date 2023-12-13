@@ -7,10 +7,12 @@ import tifffile
 import json
 import time
 from config import obj_list, mag_list, ill_list
+from umanager import core
 
 class ImageGUI(object):
 	def __init__(self, root, parent):
-		self.core = Core()
+		#self.core = Core()
+		self.core = core
 		self.parent = parent
 		root.title("image control")
 		mainframe = ttk.Frame(root, padding = "3 3 12 12")
