@@ -100,7 +100,7 @@ class ImageGUI(object):
 
 	def snap_and_save(self):#, manual_meta_dict={}):
 		active_directory = self.parent.active_dir.get()
-		##can't snap if live mode is on. Check current mode, stop, snap, reset mode
+		##can't snap if live mode is on. Check current mode, stop, snap, process, save, reset mode
 		live_mode = studio.live().get_is_live_mode_on()
 		studio.live().set_live_mode(False)
 		self.core.snap_image()
