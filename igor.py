@@ -38,12 +38,16 @@ class IgorZmq(object):
                 rec = self.send_receive("getNextSweep", [])
                 return rec['result']['value']
 
-        def get_DAC_status(self):
+        def get_DAQ_status(self):
                 rec = self.send_receive("isDAQhappening", [])
                 return rec['result']['value']
 
         def dmd_ephys_prep(self):
                 rec = self.send_receive("dmd_ephys_prep", [])
+
+        def start_DAQ(self): ##returns 1 if DAQ started, 0 if DAQ is running and sweep not started
+                rec = self.send_receive("startDAQ", [])
+                return rec['result']['value']
 
 if __name__ == '__main__':
         igor_zmq = IgorZmq()
