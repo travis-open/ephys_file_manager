@@ -16,7 +16,7 @@ def np_array_to_list(meta_dict):
 	"""
 	for k, v in meta_dict.items():
 		if type(v) == np.ndarray:
-			meta_dict[k] = list(v)
+			meta_dict[k] = v.tolist()
 	return meta_dict
 
 def all_values_to_str(meta_dict):
