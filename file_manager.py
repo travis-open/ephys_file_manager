@@ -215,7 +215,7 @@ class DirectoryGUI(object):
 		phys_file_path=self.active_dir.get()
 		site_dict=self.collect_site_data()
 		upload_md('site', site_dict)
-		append_md('site.json', site_dict)
+		update_md('site.json', site_dict)
 		if self.HS0_var.get():
 			cell0_dict={
 			'site_ID': site_ID,
@@ -226,7 +226,7 @@ class DirectoryGUI(object):
 			'pipette_solution': self.pip_sol_0.get(),
 			'reporter_status': self.reporter_0.get()
 			}
-			append_md('cell0.json', cell0_dict)
+			update_md('cell0.json', cell0_dict)
 			upload_md('cell', cell0_dict, col_match='cell_ID')
 		if self.HS1_var.get():
 			cell1_dict={
@@ -238,11 +238,11 @@ class DirectoryGUI(object):
 			'pipette_solution': self.pip_sol_1.get(),
 			'reporter_status': self.reporter_1.get()
 			}
-			append_md('cell1.json', cell1_dict)
+			update_md('cell1.json', cell1_dict)
 			upload_md('cell', cell1_dict, col_match='cell_ID')
 		slice_dict=self.collect_slice_data()
 		slice_json_path=self.slice_directory+r"\slice.json"
-		append_md(slice_json_path, slice_dict)
+		update_md(slice_json_path, slice_dict)
 		upload_md('slice', slice_dict)
 				
 	def base_up(self):
@@ -262,23 +262,23 @@ class DirectoryGUI(object):
 			day_dict=self.collect_day_data()
 			day_json_path=self.day_directory+r"\day.json"
 			upload_md('day', day_dict)
-			append_md(day_json_path, day_dict)
+			update_md(day_json_path, day_dict)
 			animal_dict = self.collect_animal_data()
 			upload_md('animal', animal_dict, col_match='animal_ID')
 		
 		if self.directory_level=='slice':
 			slice_dict=self.collect_slice_data()
 			upload_md('slice', slice_dict)
-			append_md('slice.json', slice_dict)
+			update_md('slice.json', slice_dict)
 
 		if self.directory_level=='site':
 			slice_dict=self.collect_slice_data()
 			upload_md('slice', slice_dict)
 			slice_json_path=self.slice_directory+r"\slice.json"
-			append_md(slice_json_path, slice_dict)
+			update_md(slice_json_path, slice_dict)
 			site_dict=self.collect_site_data()
 			upload_md('site', site_dict)
-			append_md('site.json', site_dict)
+			update_md('site.json', site_dict)
 
 		self.sliceIDvar.set('')
 		self.wellIDvar.set('')
@@ -297,11 +297,11 @@ class DirectoryGUI(object):
 		slice_dict=self.collect_slice_data()
 		upload_md('slice', slice_dict)
 		slice_json_path=self.slice_directory+r"\slice.json"
-		append_md(slice_json_path, slice_dict)
+		update_md(slice_json_path, slice_dict)
 		if self.directory_level=='site':
 			site_dict=self.collect_site_data()
 			upload_md('site', site_dict)
-			append_md('site.json', site_dict)
+			update_md('site.json', site_dict)
 		self.reset_cell_info()
 		make_new_site()
 		self.update_active()
@@ -309,7 +309,7 @@ class DirectoryGUI(object):
 		phys_file_path=self.active_dir.get()
 		site_dict=self.collect_site_data()
 		upload_md('site', site_dict)
-		append_md('site.json', site_dict)
+		update_md('site.json', site_dict)
 		self.directory_level='site'
 		
 

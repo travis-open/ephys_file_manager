@@ -10,13 +10,27 @@ gc = gspread.service_account(filename='mycredentials.json')
 gsheet = gc.open_by_key(gsheet_key)
 
 
+def np_array_to_list(meta_dict):
+	"""
+	Convert any np arrays within a dictionary to list to facilitate json writing
+	"""
+	for k, v in meta_dict.items():
+		if type(v) == np.ndarray:
+			meta_dict[k] = list(v)
+	return meta_dict
 
-def append_md(filepath, meta_dict):
+def all_values_to_str(meta_dict):
+	for k, v in meta_dict.items():
+		meta_dict[k] = str(v)
+	return meta_dict
+
+def update_md(filepath, meta_dict):
 	"""
 	Save metadata as a json to the indicated file path. 
-	Check if file exists. If so, append and update.
+	Check if file exists. If so, update.
 	Otherwise, create new json
 	"""
+	
 	try:
 		with open(filepath) as f:
 			existing_dict=json.load(f)
