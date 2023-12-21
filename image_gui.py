@@ -11,7 +11,6 @@ from umanager import core, studio, grab_image
 
 class ImageGUI(object):
 	def __init__(self, root, parent):
-		#self.core = Core()
 		self.core = core
 		self.parent = parent
 		root.title("image control")
@@ -48,39 +47,39 @@ class ImageGUI(object):
 		root.bind_all('<F7>', self.change_illumination)
 
 	def change_illumination(self, event):
-		current_ill=self.IlluminationVar.get()
+		current_ill = self.IlluminationVar.get()
 		current_index = ill_list.index(current_ill)
 		if current_index<len(ill_list)-1:
-			next_ill=ill_list[current_index+1]
+			next_ill = ill_list[current_index+1]
 		else:
-			next_ill=ill_list[0]
+			next_ill = ill_list[0]
 		self.IlluminationVar.set(next_ill)
 		self.update_micromanager(event)
 
 	def change_mag(self, event):
-		current_mag=self.MagVar.get()
+		current_mag = self.MagVar.get()
 		current_index = mag_list.index(current_mag)
-		if current_index<len(mag_list)-1:
-			next_mag=mag_list[current_index+1]
+		if current_index < len(mag_list)-1:
+			next_mag = mag_list[current_index+1]
 		else:
-			next_mag=mag_list[0]
+			next_mag = mag_list[0]
 		self.MagVar.set(next_mag)
 		self.update_micromanager(event)
 
 	def change_objective(self, event):
-		current_obj=self.ObjectiveVar.get()
+		current_obj = self.ObjectiveVar.get()
 		current_index = obj_list.index(current_obj)
-		if current_index<len(obj_list)-1:
-			next_obj=obj_list[current_index+1]
+		if current_index < len(obj_list)-1:
+			next_obj = obj_list[current_index+1]
 		else:
-			next_obj=obj_list[0]
+			next_obj = obj_list[0]
 		self.ObjectiveVar.set(next_obj)
 		self.update_micromanager(event)
 
 	def update_micromanager(self, event):
-		obj_val=self.ObjectiveVar.get()
+		obj_val = self.ObjectiveVar.get()
 		self.core.set_property("DObjective","Label", obj_val)
-		mag_val=float(self.MagVar.get()[:-1])
+		mag_val = float(self.MagVar.get()[:-1])
 		self.core.set_property("DOptovar","Zoom", mag_val)
 		ill_val = self.IlluminationVar.get()
 		self.core.set_property("DWheel","Label", ill_val)
@@ -102,15 +101,6 @@ class ImageGUI(object):
 		active_directory = self.parent.active_dir.get()
 		grab_image(active_directory)
 		self.im_md_up(str(active_dir/tfile))
-
-	def camera_button_func(self):
-		##TODO check latest file before capture, check for new file before preceding? replace sleep
-		self.capture_image()
-		time.sleep(2)
-		latest_file, img_name=self.find_recent_image()
-		dst_file=self.move_image(latest_file, img_name)
-		self.im_md_up(dst_file)
-
 
 
 if __name__ == '__main__':

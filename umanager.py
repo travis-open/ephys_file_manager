@@ -8,6 +8,9 @@ import math
 import cv2
 from matplotlib import pyplot as plt
 from pathlib import Path
+from scipy import ndimage
+from stimset_builder import StimPatternSet
+import pickle
 
 core = Core()
 igor = IgorZmq()
@@ -31,7 +34,6 @@ def grab_image(dir_path):
 	image = tagged_image.pix.reshape((image_height, image_width))
 	md = tagged_image.tags
 	filename = "img_"+str(int(time.time()))
-	#active_dir=Path(self.parent.active_dir.get())
 	tfile = filename+'.tif'
 	jsonfile = filename+'.json'
 	dir_path = Path(dir_path)
@@ -40,7 +42,11 @@ def grab_image(dir_path):
 		f.write(json.dumps(md, indent=4))
 		f.close()
 	studio.live().set_live_mode(live_mode)
-	#im_md_up(str(active_dir/tfile))
+
+def load_stim_pat_file(filename):
+    with open(filename, 'rb') as file:
+        stim_pat = pickle.load(file)
+        return stim_pat
 
 class Shutter():
 	def __init__(self, core):
@@ -51,7 +57,7 @@ class Shutter():
 		self.core.set_property(self.name, prop, value)
 
 	def set_properties(self, stim_dict):
-		shutter_list=["t1", "t2", "t3", "i1", "i2", "i3", "repeatCnt"]
+		shutter_list = ["t1", "t2", "t3", "i1", "i2", "i3", "repeatCnt"]
 		## channel and mode should always be 1 and TRIGGER barring major hardware change...
 		self.set_prop("channel", 1)
 		self.set_prop("mode", "TRIGGER")
@@ -75,7 +81,7 @@ class DMD():
 
 		
 		self.shutter = Shutter(core)
-		self.stim_id=0
+		self.stim_id = 0
 		self.homography_inverse = np.array([[ 6.53313277e-01, -7.48067857e-03,  1.09582335e+01],
        [ 1.63915770e-02,  1.32567470e+00, -1.68140354e+02],
        [ 1.68963875e-05, -2.47554547e-06,  1.00057329e+00]])
@@ -85,11 +91,11 @@ class DMD():
 		assembles parameters of dmd stimulation into one dictionary. Add fetching from GUI here(?)
 		'''
 		##t1 - t3 and i1 - i3 correspond to time and amplitude of analog output for Mightex BLS device
-		t1, t2, t3 = 1000, stim_duration, t3 #t1 = 1000 us, lag shutter to ensure mirror movement 
+		t1, t2, t3 = 10000, stim_duration, t3 #t1 = 10 ms, lag shutter to ensure mirror movement 
 		##i2 and t2 correspond to stimulus pulse
 		##t3 use in trains, only relevant when repeatCnt > 1
 		i1, i2, i3 = 0, stim_amp, 0
-		next_sweep = list(igor.get_next_sweep())
+		next_sweep = [igor.get_next_sweep()]
 		param_list = [t1, t2, t3, i1, i2, i3, repeatCnt, next_sweep, self.stim_id, sequence_name]
 		param_name_list = ["t1", "t2", "t3", "i1", "i2", "i3", "repeatCnt", "sweep", "stim_id", "sequence_name"]
 		stim_dict = {param_name_list[i]: param_list[i] for i in range(len(param_name_list))}
@@ -99,14 +105,15 @@ class DMD():
 		assert inv_image_seq.size() <=24, "image sequence too long, may cause unexpected DMD projection sequence"
 		self.core.stop_slm_sequence(self.name)
 		self.core.set_property(self.name, "TriggerType", "3")
-		self.core.load_slm_sequence(self.name)
+		self.core.load_slm_sequence(self.name, inv_image_seq)
 		self.core.wait_for_device(self.name)
+		self.core.start_slm_sequence(self.name)
 
 	def dmd_prep(self, image_seq, stim_amp=50, stim_duration=50000):
 		##TODO collect and save reference image. Ask user to confirm scope hardware.
-		grab_image()
+		##grab_image()
 		stim_dict = self.collect_dmd_params(image_seq, stim_amp, stim_duration)
-		self.stim_id+=1 ##iterate for next round
+		self.stim_id += 1 ##iterate for next round
 		self.shutter.set_properties(stim_dict)
 		
 		igor.dmd_ephys_prep()
@@ -145,55 +152,12 @@ class DMD():
 		input 3d numpy array of x, y, stim_number, convert to dmd coordinates, make Java object,
 		load sequence to DMD
 		'''
-		n_stims=dmd_stims.shape[2]
+		n_stims = dmd_stims.shape[2]
 		images_1d = JavaObject('java.util.ArrayList')
 		for i in range(n_stims):
 			image = dmd_stims[:,:,i]
 			inv_image = self.convert_image(image)
 			images_1d.add(inv_image.ravel())
 		return images_1d
-
-def draw_rect(n_cols, n_rows, i_col, i_row, img_w=1024, img_h=1024, plot = False):
-	'''
-	Draws a single rectangle at column and row indexes.
-	Intended to be used in camera coordinates, then translated to DMD.
-	'''
-    ##margins correspond to region of camera image covered by DMD. Only relevant for 1024x1024.
-    ##maybe require 1024x1024 image until better solution determined
-	left_margin = 20 
-	right_margin =120 
-	upper_margin =120 
-	lower_margin = 397
-	sub_w = img_w - left_margin - right_margin
-	sub_h = img_h - upper_margin - lower_margin
-	rect_width = math.floor(sub_w/n_cols) - 1
-	rect_height = math.floor(sub_h/n_rows) - 1
-	x0 = left_margin + i_col*rect_width
-	y0 = upper_margin + i_row*rect_height
-	stim = cv2.rectangle(
-	img = np.zeros((img_w, img_h), dtype = np.uint8),
-	rec = (x0, y0, rect_width, rect_height),
-	color = 255, 
-	thickness = -1)
-	if plot:
-		plt.imshow(stim)
-	return stim
-
-def draw_all_grid_rects(n_cols, n_rows, img_w=1024, img_h=1024):
-	'''
-	Creates 3d numpy array of all possible grid locations
-	'''
-	n_stims = n_cols * n_rows
-	grid_stims = np.zeros((img_w, img_h, n_stims), dtype=np.uint8)
-	grid_i=0
-	for ic in np.arange(n_cols):
-		for ir in np.arange(n_rows):
-			stim = draw_rect(n_cols, n_rows, ic, ir)
-			grid_stims[:,:,grid_i] = stim
-			grid_i += 1
-	return grid_stims
-
-
-
 
 

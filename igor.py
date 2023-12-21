@@ -53,34 +53,3 @@ if __name__ == '__main__':
         igor_zmq = IgorZmq()
         rec = igor_zmq.send_receive("CallMe",[])
         print(rec)
-
-
-#context=zmq.Context()
-#socket = context.socket(zmq.REQ)
-#socket.connect("tcp://127.0.0.1:5555")
-#time.sleep(0.2)
-#func_name = "CallMe" # The name of the Igor function we want to call
-#func_params = [] # The arguments to that function
-# A command sent over a ZeroMQ socket to call a function
-#command = {"version": 1, # Version of the protocol
-           #"CallFunction": # The action to do (call an Igor function)
-                #{"name": func_name, # The name of the Igor function
-                 #"params": func_params} # The arguments to that function
-          #}
-#command_str = json.dumps(command) # JSONify it
-
-# #def formatCall(cmd, params, messageID):
-#         #call = {"version": 1,
-#                 "messageID": messageID,
-#                 "CallFunction": {
-#                     "name": cmd,
-#                     "params": params}
-#                 }
-#         msg = json.dumps(call)
-#         return msg
-# messageID="testMess"
-# call=formatCall(func_name, params=func_params, messageID=messageID)
-#socket.send_string(call)
-#socket.send_string(command_str) # Send that command over the socket to Igor
-#rec = socket.recv_json()
-#print(rec)
