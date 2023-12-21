@@ -2,10 +2,6 @@ from tkinter import *
 from tkinter import ttk
 from pathlib import Path
 from metadata_upload import *
-from pycromanager import Core
-import tifffile
-import json
-import time
 from config import obj_list, mag_list, ill_list
 from umanager import core, studio, grab_image
 
