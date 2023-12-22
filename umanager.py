@@ -134,11 +134,12 @@ class DMD():
 
 		image_seq = stim_sequence_set.get_ordered_seq_by_name(order_name)
 		n_images = stim_sequence_set.n_patterns
+		order = stim_sequence_set.get_order_by_name(order_name)
 		stim_dict = self.collect_dmd_params(stim_sequence_set, order_name, stim_amp, stim_duration)
 		
 		self.shutter.set_properties(stim_dict)
 		
-		igor.dmd_ephys_prep()
+		
 		self.core.stop_slm_sequence(self.name)  ##stop any ongoing sequence
 
 		if n_images==1:  ##if one image
@@ -150,13 +151,16 @@ class DMD():
 
 	
 		elif n_images < 70: ##bad DMD behavior when sequence between 24 and 70 frames. :<( work around
+			
 			reps = math.floor(120/n_images) ##standard ephys protocols have 120 TTL pulses find number of reps available
 			expanded_set = np.zeros((image_seq.shape[0], image_seq.shape[1], 120), dtype=np.uint8)
+			expanded_order = np.zeros(reps*n_images, dtype=np.uint8)
 			for i in range(reps):
 				start_i = i*n_images
 				stop_i = (i+1)*n_images
 				expanded_set[:,:,start_i:stop_i] = image_seq
-			ns = igor.get_next_sweep()
+				expanded_order[start_i:stop_i] = order
+			igor.dmd_ephys_prep(stimset_name=stim_sequence_set.name, order=expanded_order, order_name=order_name)
 			invert_set = self.convert_set(expanded_set)
 			self.load_sequence(invert_set)
 			self.shutter.set_open()
