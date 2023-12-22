@@ -121,7 +121,7 @@ class DMD():
 		'''
 		load image sequence (should be in DMD dimensions) to DMD, set trigger
 		'''
-		assert inv_image_seq.size() <=24, "image sequence too long, may cause unexpected DMD projection sequence"
+		##assert inv_image_seq.size() <=24, "image sequence too long, may cause unexpected DMD projection sequence"
 		self.core.stop_slm_sequence(self.name)
 		self.core.set_property(self.name, "TriggerType", "3")
 		self.core.load_slm_sequence(self.name, inv_image_seq)
@@ -133,7 +133,7 @@ class DMD():
 		##grab_image()
 
 		image_seq = stim_sequence_set.get_ordered_seq_by_name(order_name)
-
+		n_images = stim_sequence_set.n_patterns
 		stim_dict = self.collect_dmd_params(stim_sequence_set, order_name, stim_amp, stim_duration)
 		
 		self.shutter.set_properties(stim_dict)
@@ -141,7 +141,7 @@ class DMD():
 		igor.dmd_ephys_prep()
 		self.core.stop_slm_sequence(self.name)  ##stop any ongoing sequence
 
-		if image_seq.ndim == 2:  ##if one image
+		if n_images==1:  ##if one image
 			inv_image = self.convert_image(image_seq)
 			self.core.set_property(self.name, "TriggerType", "3")
 			self.core.set_slm_image(self.name, inv_image)
@@ -149,20 +149,19 @@ class DMD():
 			DAQ_started = igor.start_DAQ()
 
 	
-		if image_seq.shape[2] > 24: ##bad DMD behavior when sequence >24. :<( work around
-			n_images = image_seq.shape[2]
-			split_sets = np.split(image_seq, np.arange(24, n_images, 24), axis = 2)
-			sweep_list =[]
-			for set_i in split_sets:
-				ns = igor.get_next_sweep()
-				sweep_list.append(ns)
-				invert_set = self.convert_set(set_i)
-				self.load_sequence(invert_set)
-				self.shutter.set_open()
-				DAQ_started = igor.start_DAQ()
-				while igor.get_DAQ_status() != 0:
-					time.sleep(0.5)
-			stim_dict['sweep'] = sweep_list ##update sweep metadata to include all sweeps
+		elif n_images < 70: ##bad DMD behavior when sequence between 24 and 70 frames. :<( work around
+			reps = math.floor(120/n_images) ##standard ephys protocols have 120 TTL pulses find number of reps available
+			expanded_set = np.zeros((image_seq.shape[0], image_seq.shape[1], 120), dtype=np.uint8)
+			for i in range(reps):
+				start_i = i*n_images
+				stop_i = (i+1)*n_images
+				expanded_set[:,:,start_i:stop_i] = image_seq
+			ns = igor.get_next_sweep()
+			invert_set = self.convert_set(expanded_set)
+			self.load_sequence(invert_set)
+			self.shutter.set_open()
+			DAQ_started = igor.start_DAQ()
+			
 
 		else:
 			invert_set = self.convert_set(image_seq)
