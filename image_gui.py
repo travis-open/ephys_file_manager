@@ -93,7 +93,7 @@ class ImageGUI(object):
 		}
 		upload_md('image', image_meta_dict, force_append=True)
 
-	def snap_and_save(self):#, manual_meta_dict={}):
+	def snap_and_save(self):
 		active_directory = self.parent.active_dir.get()
 		grab_image(active_directory)
 		self.im_md_up(str(active_dir/tfile))

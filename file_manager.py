@@ -64,7 +64,7 @@ def make_new_site(i=0):
 	"""
 	if i>999:
 		raise ValueError('site i greater than 1000 not supported')
-	cwd=Path.cwd()
+	cwd = Path.cwd()
 	if cwd.parts[-1][-8:-4]=='site': ##if currently in site folder move up to day folder to make new slice
 		os.chdir('../')
 	newpath = Path(f"site-{i:03}")
@@ -72,14 +72,14 @@ def make_new_site(i=0):
 		newpath.mkdir()
 		os.chdir(newpath)
 	else:
-		i+=1
+		i += 1
 		make_new_site(i)
 
 animal_ID_list = fetch_existing_values('animal', 'animal_ID')
 
 class DirectoryGUI(object):
 	def __init__(self, root):
-		self.root=root
+		self.root = root
 		self.root.title("directory control")
 		mainframe = ttk.Frame(root, padding = "3 3 12 12")
 		mainframe.grid(column=0, row=0, sticky=(N, W, E, S))
