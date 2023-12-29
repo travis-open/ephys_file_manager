@@ -12,6 +12,7 @@ from pathlib import Path
 from config import src_list, species_list, project_list, ext_soln_list, brain_region_list, subregion_list, pip_soln_list
 import subprocess
 from notepad import NotepadGUI
+from dmd_gui import DmdGUI
 
 def make_new_day(base_dir=r"C:\Data", i=0):
 	"""
@@ -187,12 +188,17 @@ class DirectoryGUI(object):
 		ttk.Button(mainframe, text="man. update", command = self.set_cwd_manual).grid(column=4, row=1)
 		ttk.Button(mainframe, text="save metadata", command = self.save_meta_button).grid(column=5, row=0)
 		ttk.Button(mainframe, text="move files", command = self.copy_files_button).grid(column=5, row=1)
+		ttk.Button(mainframe, text="DMD", command=self.launch_dmd).grid(column=5, row=7)
 		ttk.Button(mainframe, text="notepad", command = self.launch_np).grid(column=5, row=8)
 		self.directory_level='base' ##can be 'base', 'day', 'slice', 'site'
 
 	def launch_np(self):
-		notepad_window=Toplevel(self.root)
-		NotepadApp=NotepadGUI(notepad_window, self)
+		notepad_window = Toplevel(self.root)
+		NotepadApp = NotepadGUI(notepad_window, self)
+
+	def launch_dmd(self):
+		dmd_window = Toplevel(self.root)
+		dmdApp = DmdGUI(dmd_window, self)
 
 	def return_slice_ID(self):
 		"""
