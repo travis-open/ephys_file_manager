@@ -38,7 +38,7 @@ def update_md(filepath, meta_dict):
 		with open(filepath, 'w') as f:
 			f.write(json.dumps(existing_dict, indent=4))
 	except:
-		print(f"{filepath} not found")
+		print(f"{filepath} not found. Making new file.")
 		save_md(filepath, meta_dict)
 
 def save_md(filepath, meta_dict):

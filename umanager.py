@@ -25,12 +25,11 @@ igor = IgorZmq()
 studio = Studio()
 
 
-def split_with_numpy(numbers, chunk_size):
-	indices = np.arange(chunk_size, len(numbers), chunk_size)
-	return np.array_split(numbers, indices)
-
-
 def grab_image(dir_path):
+	'''
+	Snap micro-manager image with all current settings. Save as tiff and save json with associated metadata.
+	Returns the name of the tiff file.
+	'''
 	##can't snap if live mode is on. Check current mode, stop, snap, process, save, reset mode
 	live_mode = studio.live().get_is_live_mode_on()
 	studio.live().set_live_mode(False)
@@ -49,6 +48,7 @@ def grab_image(dir_path):
 		f.write(json.dumps(md, indent=4))
 		f.close()
 	studio.live().set_live_mode(live_mode)
+	return tfile
 
 def load_stim_sequence_file(filename):
     with open(filename, 'rb') as file:
@@ -152,6 +152,12 @@ class DMD():
 		self.core.stop_slm_sequence(self.name) ##stop and restart ongoing sequence so that first frame is as expected
 		self.core.start_slm_sequence(self.name)
 		self.shutter.set_properties(stim_dict)
+		next_sweep = [igor.get_next_sweep()]
+		order = np.array(stim_dict['order'])
+		igor.dmd_ephys_prep(stimset_name=stim_dict['sequence_name'], 
+			order=order, order_name=stim_dict['order_name'])
+		update_photostim_log(stim_dict)
+		self.stim_id += 1
 
 	def load_run(self, stim_sequence_set, order_name='default', stim_amp=50, stim_duration=50):
 		##TODO collect and save reference image. Ask user to confirm scope hardware.
@@ -161,7 +167,8 @@ class DMD():
 		image_seq = stim_sequence_set.get_ordered_seq_by_name(order_name)
 		n_images = stim_sequence_set.n_patterns
 		order = stim_sequence_set.get_order_by_name(order_name)
-		stim_dict = self.collect_dmd_params(stim_sequence_set, order_name, stim_amp, stim_duration)
+		stim_dict = self.collect_dmd_params(stim_sequence_set, order_name,
+		 stim_amp, stim_duration)
 		
 		self.shutter.set_properties(stim_dict)
 		self.core.stop_slm_sequence(self.name)  ##stop any ongoing sequence
