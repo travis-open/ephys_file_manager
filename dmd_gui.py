@@ -72,26 +72,40 @@ class DmdGUI(object):
 		self.order_combo = ttk.Combobox(mainframe, textvariable=self.order_var, postcommand=self.get_orders)
 		self.order_combo.grid(column=3, row=1)
 
-		ttk.Button(mainframe, text='run', command=self.run_dmd_acq_gui).grid(column=3, row=4)
+		ttk.Button(mainframe, text='load and run', command=self.load_run_dmd_gui).grid(column=2, row=4)
+		ttk.Button(mainframe, text='run current seq', command=self.run_current_seq).grid(column=0, row=sp_row_start+4)
+		ttk.Button(mainframe, text='load', command=self.load_dmd_gui).grid(column=1, row=4)
 
-	def run_dmd_acq_gui(self):
+	def load_run_dmd_gui(self):
 		amp = self.amp_var.get()
 		dur = self.dur_var.get()
 		reps = self.reps_var.get()
 		isi = self.ISI_var.get()
 		order_name = self.order_var.get()
-		self.dmd.dmd_run(self.dmd.current_stim_sequence, order_name=order_name, 
+		self.dmd.load_run(self.dmd.current_stim_sequence, order_name=order_name, 
 			stim_amp=amp, stim_duration=dur)
 
+	def load_dmd_gui(self):
+		order_name = self.order_var.get()
+		order = self.dmd.current_stim_sequence.get_order_by_name(order_name)
+		self.dmd.prep_and_load(order)
 
+
+	def run_current_seq(self):
+		amp = self.amp_var.get()
+		dur = self.dur_var.get()
+		reps = self.reps_var.get()
+		isi = self.ISI_var.get()
+		order_name = self.order_var.get()
+		stim_dict = self.dmd.collect_dmd_params(self.dmd.current_stim_sequence, order_name, 
+			stim_amp=amp, stim_duration=dur, repeatCnt=reps, isi=isi)
+		self.dmd.run_current_sequence(stim_dict)
 
 	def update_dmd_current_ss(self, event):
 		StimSet_filepath = self.StimSet_directory+self.SSS_var.get()+'.pickle'
 		self.dmd.update_stim_sequence(StimSet_filepath)
 
 	def get_orders(self):
-		#StimSet_filepath = self.StimSet_directory+self.SSS_var.get()+'.pickle'
-		#stim_sequence_set = load_stim_sequence_file(StimSet_filepath)
 		stim_sequence_dict = self.dmd.current_stim_sequence.sequence_dict
 		order_list = list(stim_sequence_dict.keys())
 		self.order_combo.configure(value=order_list)

@@ -1,3 +1,9 @@
+"""
+Code for controlling Polygon 400 DMD largely based on: https://gitlab.com/dunloplab/pycromanager/-/blob/master/pycromanager_tessie/microscope/dmd.py?ref_type=heads
+Thank you to Jean-Baptiste Lugagne and other contributors.
+"""
+
+
 from pycromanager import Core, JavaObject, Studio
 import tifffile
 import json
@@ -18,7 +24,6 @@ core = Core()
 igor = IgorZmq()
 studio = Studio()
 
-images_1d = JavaObject('java.util.ArrayList')
 
 def split_with_numpy(numbers, chunk_size):
 	indices = np.arange(chunk_size, len(numbers), chunk_size)
@@ -80,23 +85,24 @@ class DMD():
 		self.h = self.core.get_slm_height(self.name)
 		self.w = self.core.get_slm_width(self.name)
 		self.shape = (self.h,self.w)
-
-		
 		self.shutter = Shutter(core)
 		self.stim_id = 0
 		self.homography_inverse = np.array([[ 6.53313277e-01, -7.48067857e-03,  1.09582335e+01],
        [ 1.63915770e-02,  1.32567470e+00, -1.68140354e+02],
        [ 1.68963875e-05, -2.47554547e-06,  1.00057329e+00]])
 		self.current_stim_sequence = None
+		self.current_stim_dict = None
 
 	def update_stim_sequence(self, filename):
 		stim_sequence_set = load_stim_sequence_file(filename)
 		self.current_stim_sequence = stim_sequence_set
 
+	def update_stim_dict(self, stim_dict):
+		self.current_stim_dict = stim_dict
 
 	def collect_dmd_params(self, stim_sequence_set, order_name='default', stim_amp=50, stim_duration=50, repeatCnt=1, isi=100):
 		'''
-		assembles parameters of dmd stimulation into one dictionary. Add fetching from GUI here(?)
+		assembles parameters of dmd stimulation into one dictionary. 
 		'''
 		##shutter params
 		##t1 - t3 and i1 - i3 correspond to time and amplitude of analog output for Mightex BLS device, time in us
@@ -123,59 +129,62 @@ class DMD():
 		stim_dict = dict(zip(param_name_list, param_list))
 		return stim_dict
 
-	def load_sequence(self, inv_image_seq):
+
+	def prep_and_load(self, order, target_n=120):
+		image_seq = self.current_stim_sequence.get_ordered_seq(order)
+		expanded_set, expanded_order = self.pad_sequence(image_seq, order, target_n, with_reps=True)
+		if self.current_stim_dict:
+			self.current_stim_dict['order'] = expanded_order.tolist()
+		inv_image_seq = self.convert_set(expanded_set)
+		self.load_sequence_to_dmd(inv_image_seq)
+
+	def load_sequence_to_dmd(self, inv_image_seq):
 		'''
 		load image sequence (should be in DMD dimensions) to DMD, set trigger
 		'''
 		self.core.stop_slm_sequence(self.name)
-		self.core.set_property(self.name, "TriggerType", "3")
+		self.core.set_property(self.name, "TriggerType", "2")
 		self.core.load_slm_sequence(self.name, inv_image_seq)
 		self.core.wait_for_device(self.name)
 		self.core.start_slm_sequence(self.name)
 
-	def dmd_run(self, stim_sequence_set, order_name='default', stim_amp=50, stim_duration=50):
+	def run_current_sequence(self, stim_dict):
+		self.core.stop_slm_sequence(self.name) ##stop and restart ongoing sequence so that first frame is as expected
+		self.core.start_slm_sequence(self.name)
+		self.shutter.set_properties(stim_dict)
+
+	def load_run(self, stim_sequence_set, order_name='default', stim_amp=50, stim_duration=50):
 		##TODO collect and save reference image. Ask user to confirm scope hardware.
 		##grab_image()
 
+		##create sequence of images in desired order
 		image_seq = stim_sequence_set.get_ordered_seq_by_name(order_name)
 		n_images = stim_sequence_set.n_patterns
 		order = stim_sequence_set.get_order_by_name(order_name)
 		stim_dict = self.collect_dmd_params(stim_sequence_set, order_name, stim_amp, stim_duration)
 		
 		self.shutter.set_properties(stim_dict)
-		
-		
 		self.core.stop_slm_sequence(self.name)  ##stop any ongoing sequence
 
 		if n_images==1:  ##if one image
 			inv_image = self.convert_image(image_seq)
-			self.core.set_property(self.name, "TriggerType", "3")
+			self.core.set_property(self.name, "TriggerType", "2")
 			self.core.set_slm_image(self.name, inv_image)
 			self.core.display_slm_image(self.name)
 			DAQ_started = igor.start_DAQ()
 
-	
 		elif n_images < 70: ##bad DMD behavior when sequence between 24 and 70 frames. :<( work around
-			
-			reps = math.floor(120/n_images) ##standard ephys protocols have 120 TTL pulses find number of reps available
-			expanded_set = np.zeros((image_seq.shape[0], image_seq.shape[1], 120), dtype=np.uint8)
-			expanded_order = np.zeros(reps*n_images, dtype=np.uint8)
-			for i in range(reps):
-				start_i = i*n_images
-				stop_i = (i+1)*n_images
-				expanded_set[:,:,start_i:stop_i] = image_seq
-				expanded_order[start_i:stop_i] = order
-			stim_dict['order'] = expanded_order
+			expanded_set, expanded_order = self.pad_sequence(image_seq, order, target_n=120, with_reps=True)
+			stim_dict['order'] = expanded_order.tolist()
 			igor.dmd_ephys_prep(stimset_name=stim_sequence_set.name, order=expanded_order, order_name=order_name)
 			invert_set = self.convert_set(expanded_set)
-			self.load_sequence(invert_set)
+			self.load_sequence_to_dmd(invert_set)
 			self.shutter.set_open()
 			DAQ_started = igor.start_DAQ()
 			
-
 		else:
 			invert_set = self.convert_set(image_seq)
-			self.load_sequence(invert_set)
+			self.load_sequence_to_dmd(invert_set)
 			self.shutter.set_open()
 			DAQ_started = igor.start_DAQ()
 
@@ -202,6 +211,29 @@ class DMD():
 			inv_image = self.convert_image(image)
 			images_1d.add(inv_image.ravel())
 		return images_1d
+
+	
+
+	def pad_sequence(self, image_seq, order, target_n=120, with_reps=True):
+		'''
+		Increase length of photostim image_seq to match target_n. 
+		Primarily used to match sequence length to number of ephys triggers.
+		Padded with repeats of image_seq and/or blank stimuli.
+		'''
+		n_images = len(order)
+		expanded_image_seq = np.zeros((image_seq.shape[0], image_seq.shape[1], target_n), dtype=np.uint8)
+		if with_reps:
+			reps = math.floor(target_n/n_images)	
+		else:
+			reps = 1
+		expanded_order = np.zeros(reps*n_images, dtype=np.uint)
+		for i in range(reps):
+			start_i = i * n_images
+			stop_i = (i+1) * n_images
+			expanded_image_seq[:, :, start_i:stop_i] = image_seq
+			expanded_order[start_i:stop_i] = order
+		return expanded_image_seq, expanded_order
+
 
 def save_photostim_params(stim_dict):
 	filename = "photostim_log.json"
