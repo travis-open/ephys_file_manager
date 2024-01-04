@@ -87,6 +87,7 @@ class DMD():
 		self.shape = (self.h,self.w)
 		self.shutter = Shutter(core)
 		self.stim_id = 0
+		##todo save homography_inverse to config or other external file
 		self.homography_inverse = np.array([[ 6.53313277e-01, -7.48067857e-03,  1.09582335e+01],
        [ 1.63915770e-02,  1.32567470e+00, -1.68140354e+02],
        [ 1.68963875e-05, -2.47554547e-06,  1.00057329e+00]])
@@ -148,7 +149,7 @@ class DMD():
 		self.core.wait_for_device(self.name)
 		self.core.start_slm_sequence(self.name)
 
-	def run_current_sequence(self, stim_dict):
+	def run_current_sequence(self, stim_dict, start_mies=False):
 		self.core.stop_slm_sequence(self.name) ##stop and restart ongoing sequence so that first frame is as expected
 		self.core.start_slm_sequence(self.name)
 		self.shutter.set_properties(stim_dict)
@@ -157,6 +158,8 @@ class DMD():
 		igor.dmd_ephys_prep(stimset_name=stim_dict['sequence_name'], 
 			order=order, order_name=stim_dict['order_name'])
 		update_photostim_log(stim_dict)
+		if start_mies:
+			igor.start_DAQ()
 		self.stim_id += 1
 
 	def load_run(self, stim_sequence_set, order_name='default', stim_amp=50, stim_duration=50):

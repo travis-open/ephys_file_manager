@@ -74,7 +74,10 @@ class DmdGUI(object):
 
 		ttk.Button(mainframe, text='load and run', command=self.load_run_dmd_gui).grid(column=2, row=4)
 		ttk.Button(mainframe, text='run current seq', command=self.run_current_seq).grid(column=0, row=sp_row_start+4)
-		ttk.Button(mainframe, text='load', command=self.load_dmd_gui).grid(column=1, row=4)
+		ttk.Button(mainframe, text='load', command=self.load_dmd_gui).grid(column=3, row=4)
+
+		self.start_mies_var=IntVar()
+		mies_cb=ttk.Checkbutton(mainframe, text='start MIES', variable=self.start_mies_var).grid(column=1,row=4)
 
 	def load_run_dmd_gui(self):
 		amp = self.amp_var.get()
@@ -97,9 +100,10 @@ class DmdGUI(object):
 		reps = self.reps_var.get()
 		isi = self.ISI_var.get()
 		order_name = self.order_var.get()
+		start_mies = self.start_mies_var.get()
 		stim_dict = self.dmd.collect_dmd_params(self.dmd.current_stim_sequence, order_name, 
 			stim_amp=amp, stim_duration=dur, repeatCnt=reps, isi=isi)
-		self.dmd.run_current_sequence(stim_dict)
+		self.dmd.run_current_sequence(stim_dict, start_mies)
 
 	def update_dmd_current_ss(self, event):
 		StimSet_filepath = self.StimSet_directory+self.SSS_var.get()+'.pickle'
