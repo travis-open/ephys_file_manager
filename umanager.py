@@ -245,6 +245,20 @@ class DMD():
 			expanded_order[start_i:stop_i] = order
 		return expanded_image_seq, expanded_order
 
+	def set_image(self, image):
+		assert image.shape == self.shape, f"dimensions of image {image.shape} and dmd {self.shape} do not match"
+		self.core.set_slm_image(self.name, image)
+
+	def all_pixels_on(self):
+		image = np.ones((1024, 1024), dtype=np.uint8) * 255
+		inv_image = self.convert_image(image)
+		self.set_image(inv_image)
+
+	def stop_sequence(self):
+		self.core.stop_slm_sequence(self.name)
+
+
+
 
 def save_photostim_params(stim_dict):
 	filename = "photostim_log.json"

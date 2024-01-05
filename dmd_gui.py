@@ -72,9 +72,12 @@ class DmdGUI(object):
 		self.order_combo = ttk.Combobox(mainframe, textvariable=self.order_var, postcommand=self.get_orders)
 		self.order_combo.grid(column=3, row=1)
 
-		ttk.Button(mainframe, text='load and run', command=self.load_run_dmd_gui).grid(column=2, row=4, padx=10)
+		#ttk.Button(mainframe, text='load and run', command=self.load_run_dmd_gui).grid(column=2, row=4, padx=10)
+		ttk.Button(mainframe, text='all pixels on', command=self.dmd.all_pixels_on).grid(column=2, row=4)
 		ttk.Button(mainframe, text='run current seq', command=self.run_current_seq).grid(column=0, row=sp_row_start+4)
 		ttk.Button(mainframe, text='load', command=self.load_dmd_gui).grid(column=3, row=4)
+		ttk.Button(mainframe, text='stop', command=self.dmd.stop_sequence).grid(column=0, row=5)
+
 		self.load_state_text = StringVar(value='no seq loaded')
 		self.load_state = ttk.Label(mainframe, textvariable=self.load_state_text).grid(column=3, row=3)
 
