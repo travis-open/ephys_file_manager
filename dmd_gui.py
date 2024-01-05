@@ -72,12 +72,14 @@ class DmdGUI(object):
 		self.order_combo = ttk.Combobox(mainframe, textvariable=self.order_var, postcommand=self.get_orders)
 		self.order_combo.grid(column=3, row=1)
 
-		ttk.Button(mainframe, text='load and run', command=self.load_run_dmd_gui).grid(column=2, row=4)
+		ttk.Button(mainframe, text='load and run', command=self.load_run_dmd_gui).grid(column=2, row=4, padx=10)
 		ttk.Button(mainframe, text='run current seq', command=self.run_current_seq).grid(column=0, row=sp_row_start+4)
 		ttk.Button(mainframe, text='load', command=self.load_dmd_gui).grid(column=3, row=4)
+		self.load_state_text = StringVar(value='no seq loaded')
+		self.load_state = ttk.Label(mainframe, textvariable=self.load_state_text).grid(column=3, row=3)
 
-		self.start_mies_var=IntVar()
-		mies_cb=ttk.Checkbutton(mainframe, text='start MIES', variable=self.start_mies_var).grid(column=1,row=4)
+		self.start_mies_var = IntVar()
+		mies_cb = ttk.Checkbutton(mainframe, text='start MIES', variable=self.start_mies_var).grid(column=1,row=4, padx=10)
 
 	def load_run_dmd_gui(self):
 		amp = self.amp_var.get()
@@ -92,7 +94,8 @@ class DmdGUI(object):
 		order_name = self.order_var.get()
 		order = self.dmd.current_stim_sequence.get_order_by_name(order_name)
 		self.dmd.prep_and_load(order)
-
+		self.load_state_text.set(f"{self.dmd.current_stim_sequence.name}:{order_name} loaded")
+		self.root.update_idletasks()
 
 	def run_current_seq(self):
 		amp = self.amp_var.get()

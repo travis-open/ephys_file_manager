@@ -93,6 +93,7 @@ class DMD():
        [ 1.68963875e-05, -2.47554547e-06,  1.00057329e+00]])
 		self.current_stim_sequence = None
 		self.current_stim_dict = None
+		self.sequence_loaded = False
 
 	def update_stim_sequence(self, filename):
 		stim_sequence_set = load_stim_sequence_file(filename)
