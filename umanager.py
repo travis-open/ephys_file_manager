@@ -110,7 +110,10 @@ class DMD():
 		##t1 - t3 and i1 - i3 correspond to time and amplitude of analog output for Mightex BLS device, time in us
 		t1 = 10000 #t1 = 10 ms, lag shutter to ensure mirror movement 
 		t2 = int(stim_duration * 1000) ##t2 convert stim duration to us
-		t3 = int(isi * 1000 - (t1 + t2)) ##convert isi to us, subtract t1 and t2 so that time is start to start
+		if repeatCnt == 1:
+			t3 = 0
+		else:
+			t3 = int(isi * 1000 - (t1 + t2)) ##convert isi to us, subtract t1 and t2 so that time is start to start
 		i1, i2, i3 = 0, stim_amp, 0
 		
 		##dmd sequence params
