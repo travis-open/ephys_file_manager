@@ -42,10 +42,10 @@ class IgorZmq(object):
                 rec = self.send_receive("isDAQhappening", [])
                 return rec['result']['value']
 
-        def dmd_ephys_prep(self, stimset_name="", order="", order_name=""):
+        def dmd_sequence_ephys_prep(self, stimset_name="", order="", order_name=""):
                 next_sweep = self.get_next_sweep()
                 order_str = self.array_to_igor_list(order)
-                rec = self.send_receive("dmd_ephys_prep", [next_sweep, stimset_name, order_str, order_name])
+                rec = self.send_receive("dmd_sequence_ephys_prep", [next_sweep, stimset_name, order_str, order_name])
 
         def start_DAQ(self): ##returns 1 if DAQ started, 0 if DAQ is running and sweep not started
                 rec = self.send_receive("startDAQ", [])
