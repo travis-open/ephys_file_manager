@@ -72,11 +72,11 @@ class DmdGUI(object):
 		self.order_combo = ttk.Combobox(mainframe, textvariable=self.order_var, postcommand=self.get_orders)
 		self.order_combo.grid(column=3, row=1)
 
-		#ttk.Button(mainframe, text='load and run', command=self.load_run_dmd_gui).grid(column=2, row=4, padx=10)
 		ttk.Button(mainframe, text='all pixels on', command=self.dmd.all_pixels_on).grid(column=2, row=4)
 		ttk.Button(mainframe, text='run current seq', command=self.run_current_seq).grid(column=0, row=sp_row_start+4)
-		ttk.Button(mainframe, text='load', command=self.load_dmd_gui).grid(column=3, row=4)
+		ttk.Button(mainframe, text='load seq', command=self.load_seq_dmd_gui).grid(column=3, row=4)
 		ttk.Button(mainframe, text='stop', command=self.dmd.stop_sequence).grid(column=2, row=5)
+		ttk.Button(mainframe, text='load frame', command=self.load_frame_dmd_gui).grid(column=3, row=5)
 
 		self.load_state_text = StringVar(value='no seq loaded')
 		self.load_state = ttk.Label(mainframe, textvariable=self.load_state_text).grid(column=3, row=3)
@@ -84,19 +84,20 @@ class DmdGUI(object):
 		self.start_mies_var = IntVar()
 		mies_cb = ttk.Checkbutton(mainframe, text='start MIES', variable=self.start_mies_var).grid(column=1,row=4, padx=10)
 
-	def load_run_dmd_gui(self):
-		amp = self.amp_var.get()
-		dur = self.dur_var.get()
-		reps = self.reps_var.get()
-		isi = self.ISI_var.get()
-		order_name = self.order_var.get()
-		self.dmd.load_run(self.dmd.current_stim_sequence, order_name=order_name, 
-			stim_amp=amp, stim_duration=dur)
 
-	def load_dmd_gui(self):
+	def load_seq_dmd_gui(self):
 		order_name = self.order_var.get()
 		order = self.dmd.current_stim_sequence.get_order_by_name(order_name)
 		self.dmd.prep_and_load(order)
+		self.load_state_text.set(f"{self.dmd.current_stim_sequence.name}:{order_name} loaded")
+		self.root.update_idletasks()
+
+	def load_frame_dmd_gui(self):
+		order_name = self.order_var.get()
+		order = self.dmd.current_stim_sequence.get_order_by_name(order_name)
+		image = self.dmd.current_stim_sequence.get_single_image(order[0])
+		inv_image = self.dmd.convert_image(image)
+		self.dmd.set_image(inv_image)
 		self.load_state_text.set(f"{self.dmd.current_stim_sequence.name}:{order_name} loaded")
 		self.root.update_idletasks()
 

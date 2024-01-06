@@ -159,52 +159,29 @@ class DMD():
 		self.shutter.set_properties(stim_dict)
 		next_sweep = [igor.get_next_sweep()]
 		order = np.array(stim_dict['order'])
-		igor.dmd_ephys_prep(stimset_name=stim_dict['sequence_name'], 
+		if len(order) == 1:
+			igor.dmd_frame_ephys_prep(stimset_name=stim_dict['sequence_name'], 
+			order=order, order_name=stim_dict['order_name'])
+		else:
+			igor.dmd_sequence_ephys_prep(stimset_name=stim_dict['sequence_name'], 
 			order=order, order_name=stim_dict['order_name'])
 		update_photostim_log(stim_dict)
 		if start_mies:
 			igor.start_DAQ()
 		self.stim_id += 1
 
-	def load_run(self, stim_sequence_set, order_name='default', stim_amp=50, stim_duration=50):
-		##TODO collect and save reference image. Ask user to confirm scope hardware.
-		##grab_image()
-
-		##create sequence of images in desired order
-		image_seq = stim_sequence_set.get_ordered_seq_by_name(order_name)
-		n_images = stim_sequence_set.n_patterns
-		order = stim_sequence_set.get_order_by_name(order_name)
-		stim_dict = self.collect_dmd_params(stim_sequence_set, order_name,
-		 stim_amp, stim_duration)
-		
+	def run_current_img(self, stim_dict, start_mies=False):
+		order = np.array(stim_dict['order'])
+		assert len(order) == 1, f"length of order is {len(order)}. Expected length==1"
 		self.shutter.set_properties(stim_dict)
-		self.core.stop_slm_sequence(self.name)  ##stop any ongoing sequence
-
-		if n_images==1:  ##if one image
-			inv_image = self.convert_image(image_seq)
-			self.core.set_property(self.name, "TriggerType", "2")
-			self.core.set_slm_image(self.name, inv_image)
-			self.core.display_slm_image(self.name)
-			DAQ_started = igor.start_DAQ()
-
-		elif n_images < 70: ##bad DMD behavior when sequence between 24 and 70 frames. :<( work around
-			expanded_set, expanded_order = self.pad_sequence(image_seq, order, target_n=120, with_reps=True)
-			stim_dict['order'] = expanded_order.tolist()
-			igor.dmd_ephys_prep(stimset_name=stim_sequence_set.name, order=expanded_order, order_name=order_name)
-			invert_set = self.convert_set(expanded_set)
-			self.load_sequence_to_dmd(invert_set)
-			self.shutter.set_open()
-			DAQ_started = igor.start_DAQ()
-			
-		else:
-			invert_set = self.convert_set(image_seq)
-			self.load_sequence_to_dmd(invert_set)
-			self.shutter.set_open()
-			DAQ_started = igor.start_DAQ()
-
+		next_sweep = [igor.get_next_sweep()]
+		igor.dmd_frame_ephys_prep(stimset_name=stim_dict['sequence_name'], 
+			order=order, order_name=stim_dict['order_name'])
 		update_photostim_log(stim_dict)
-		self.stim_id += 1 ##iterate for next round
-		
+		if start_mies:
+			igor.start_DAQ()
+		self.stim_id += 1
+
 		
 	def convert_image(self, image):
 		'''
@@ -225,8 +202,6 @@ class DMD():
 			inv_image = self.convert_image(image)
 			images_1d.add(inv_image.ravel())
 		return images_1d
-
-	
 
 	def pad_sequence(self, image_seq, order, target_n=120, with_reps=True):
 		'''
@@ -259,9 +234,6 @@ class DMD():
 
 	def stop_sequence(self):
 		self.core.stop_slm_sequence(self.name)
-
-
-
 
 def save_photostim_params(stim_dict):
 	filename = "photostim_log.json"
