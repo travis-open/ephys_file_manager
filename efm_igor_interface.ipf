@@ -33,6 +33,11 @@ Function getNextSweep() //return next sweep to be associated with photostim
 	return nextsweep
 end
 
+Function/s getMIESname() //return file name (pxp and nwb)
+	string fname = IgorInfo(1)
+	return fname
+end
+
 Function isDAQhappening() //return 0 if acquisition is not taking place
 	NVAR runmode = $GetDataAcqRunMode("Dev1")
 	return runmode
