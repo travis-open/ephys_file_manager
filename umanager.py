@@ -153,18 +153,20 @@ class DMD():
 		self.core.wait_for_device(self.name)
 		self.core.start_slm_sequence(self.name)
 
-	def run_current_sequence(self, stim_dict, start_mies=False):
+	def run_current_sequence(self, stim_dict, sweep_reps=1, start_mies=False):
 		self.core.stop_slm_sequence(self.name) ##stop and restart ongoing sequence so that first frame is as expected
 		self.core.start_slm_sequence(self.name)
 		self.shutter.set_properties(stim_dict)
-		next_sweep = [igor.get_next_sweep()]
+		next_sweep = igor.get_next_sweep()
+		next_sweep_list = list(range(next_sweep, next_sweep+sweep_reps))
+		stim_dict['sweep'] = next_sweep_list
 		order = np.array(stim_dict['order'])
 		if len(order) == 1:
 			igor.dmd_frame_ephys_prep(stimset_name=stim_dict['sequence_name'], 
-			order=order, order_name=stim_dict['order_name'])
+			order=order, order_name=stim_dict['order_name'], sweep_reps=sweep_reps)
 		else:
 			igor.dmd_sequence_ephys_prep(stimset_name=stim_dict['sequence_name'], 
-			order=order, order_name=stim_dict['order_name'])
+			order=order, order_name=stim_dict['order_name'], sweep_reps=sweep_reps)
 		update_photostim_log(stim_dict)
 		if start_mies:
 			igor.start_DAQ()
