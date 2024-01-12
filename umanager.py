@@ -123,13 +123,14 @@ class DMD():
 		##timing and alignment info
 		now = str(datetime.datetime.now())
 		next_sweep = [igor.get_next_sweep()]
+		mies_name = igor.get_mies_name()
 		stim_id = self.stim_id
 		
 		param_list = [t1, t2, t3, i1, i2, i3, repeatCnt, 
-		next_sweep, stim_id, sequence_name, order_name, order, now]
+		next_sweep, stim_id, sequence_name, order_name, order, now, mies_name]
 		
 		param_name_list = ["t1", "t2", "t3", "i1", "i2", "i3", "repeatCnt", 
-		"sweep", "stim_id", "sequence_name", "order_name", "order", "time_stim"]
+		"sweep", "stim_id", "sequence_name", "order_name", "order", "time_stim", "mies_name"]
 		
 		stim_dict = dict(zip(param_name_list, param_list))
 		return stim_dict

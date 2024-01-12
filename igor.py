@@ -38,6 +38,10 @@ class IgorZmq(object):
                 rec = self.send_receive("getNextSweep", [])
                 return rec['result']['value']
 
+        def get_mies_name(self):
+                rec = self.send_receive("getMIESname", [])
+                return rec['result']['value']
+
         def get_DAQ_status(self):
                 rec = self.send_receive("isDAQhappening", [])
                 return rec['result']['value']
