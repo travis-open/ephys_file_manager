@@ -85,11 +85,17 @@ class ImageGUI(object):
 		obj_val = float(self.ObjectiveVar.get()[:-1])
 		ill_val = self.IlluminationVar.get()
 		active_directory = self.parent.active_dir.get()
+		animal_id = self.parent.animalIDvar.get()
+		slice_id = self.parent.sliceIDvar.get()
+		site_id = self.parent.return_site_ID()
 		image_meta_dict = {
 		'objective': obj_val,
 		'magnification': mag_val,
 		'illumination': ill_val,
-		'full_path':dst_file
+		'full_path':dst_file,
+		'site_ID':site_id,
+		'slice_ID':slice_id,
+		'animal_ID':animal_id
 		}
 		upload_md('image', image_meta_dict, force_append=True)
 

@@ -91,6 +91,7 @@ class DirectoryGUI(object):
 		self.base_dir.set(r"C:\Data")
 		self.active_dir = StringVar()
 		self.new_dir_time = time.time()
+
 		ttk.Label(mainframe, text="base").grid(column=0, row=0)
 		ttk.Label(mainframe, text="active").grid(column=0, row=1)
 		ttk.Button(mainframe, text="new day", command=self.new_day_up).grid(column=0, row=2)
@@ -211,9 +212,12 @@ class DirectoryGUI(object):
 		"""
 		Returns full siteID (with animal ID and slice ID preceding)
 		"""
-		slice_ID=self.return_slice_ID()
-		site_ID=slice_ID+'.'+self.active_dir.get()[-8:]
-		return site_ID
+		if self.directory_level == 'site':
+			slice_ID=self.return_slice_ID()
+			site_ID=slice_ID+'.'+self.active_dir.get()[-8:]
+			return site_ID
+		else:
+			return None
 
 	def save_meta_button(self):
 		slice_ID=self.return_slice_ID()
