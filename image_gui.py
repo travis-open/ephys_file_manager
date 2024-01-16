@@ -102,7 +102,7 @@ class ImageGUI(object):
 	def snap_and_save(self):
 		active_directory = self.parent.active_dir.get()
 		tfile = grab_image(active_directory)
-		self.im_md_up(str(active_directory+tfile))
+		self.im_md_up(str(tfile))
 
 
 if __name__ == '__main__':

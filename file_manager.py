@@ -10,7 +10,6 @@ from abf_meta import *
 from nwb_info import process_nwb_in_dir
 from pathlib import Path
 from config import src_list, species_list, project_list, ext_soln_list, brain_region_list, subregion_list, pip_soln_list
-import subprocess
 from notepad import NotepadGUI
 from dmd_gui import DmdGUI
 

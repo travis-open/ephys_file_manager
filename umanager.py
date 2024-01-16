@@ -48,7 +48,7 @@ def grab_image(dir_path):
 		f.write(json.dumps(md, indent=4))
 		f.close()
 	studio.live().set_live_mode(live_mode)
-	return tfile
+	return dir_path/tfile
 
 def load_stim_sequence_file(filename):
     with open(filename, 'rb') as file:
