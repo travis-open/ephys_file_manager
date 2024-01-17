@@ -313,13 +313,13 @@ class DirectoryGUI(object):
 			update_md('site.json', site_dict)
 		self.reset_cell_info()
 		make_new_site()
+		self.directory_level = 'site'
 		self.update_active()
 		site_ID=self.return_site_ID()
 		phys_file_path=self.active_dir.get()
 		site_dict=self.collect_site_data()
 		upload_md('site', site_dict)
 		update_md('site.json', site_dict)
-		self.directory_level='site'
 		
 
 	def collect_day_data(self):
