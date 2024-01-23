@@ -9,7 +9,7 @@ from image_gui import *
 from abf_meta import *
 from nwb_info import process_nwb_in_dir
 from pathlib import Path
-from config import src_list, species_list, project_list, ext_soln_list, brain_region_list, subregion_list, pip_soln_list
+from config import src_list, species_list, project_list, ext_soln_list, brain_region_list, subregion_list, pip_soln_list, slice_id_list
 from notepad import NotepadGUI
 from dmd_gui import DmdGUI
 
@@ -121,6 +121,7 @@ class DirectoryGUI(object):
 		self.sliceIDvar = StringVar()
 		sliceID = ttk.Combobox(mainframe, textvariable=self.sliceIDvar, width=10)
 		sliceID.grid(column=1, row=4)
+		sliceID['values'] = slice_id_list
 		ttk.Label(mainframe, text="PFA well:").grid(column=1, row=5)
 		self.wellIDvar = StringVar()
 		wellID = ttk.Combobox(mainframe, textvariable=self.wellIDvar, width=10)

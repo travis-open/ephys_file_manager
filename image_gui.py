@@ -3,7 +3,7 @@ from tkinter import ttk
 from pathlib import Path
 from metadata_upload import *
 from config import obj_list, mag_list, ill_list
-from umanager import core, studio, grab_image
+from umanager import core, studio, snap_save_image
 
 class ImageGUI(object):
 	def __init__(self, root, parent):
@@ -37,7 +37,7 @@ class ImageGUI(object):
 		mag.bind("<<ComboboxSelected>>", self.update_micromanager)
 		ill.bind("<<ComboboxSelected>>", self.update_micromanager)
 
-		ttk.Button(mainframe, text="capture, save meta", command=self.snap_and_save).grid(column=0, row=2, columnspan=3)
+		ttk.Button(mainframe, text="capture, save meta", command=self.snap_and_save_to_ad).grid(column=0, row=2, columnspan=3)
 		root.bind_all('<F5>', self.change_objective)
 		root.bind_all('<F6>', self.change_mag)
 		root.bind_all('<F7>', self.change_illumination)
@@ -99,9 +99,9 @@ class ImageGUI(object):
 		}
 		upload_md('image', image_meta_dict, force_append=True)
 
-	def snap_and_save(self):
+	def snap_and_save_to_ad(self):
 		active_directory = self.parent.active_dir.get()
-		tfile = grab_image(active_directory)
+		tfile = snap_save_image(active_directory)
 		self.im_md_up(str(tfile))
 
 
