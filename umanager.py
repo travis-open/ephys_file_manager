@@ -143,11 +143,17 @@ class DMD():
 
 
 	def prep_and_load(self, order, target_n=120):
+		'''
+		Prepare an ordered sequence of images by expanding to match target_n (if needed), convert to DMD pixel space, and load to DMD.
+		'''
 		image_seq = self.current_stim_sequence.get_ordered_seq(order)
-		expanded_set, expanded_order = self.pad_sequence(image_seq, order, target_n, with_reps=True)
+		if len(order>target_n):
+			expanded_set, order = self.pad_sequence(image_seq, order, target_n, with_reps=True)
+			inv_image_seq = self.convert_set(expanded_set)
+		else:
+			inv_image_seq = self.convert_set(image_seq)
 		if self.current_stim_dict:
-			self.current_stim_dict['order'] = expanded_order.tolist()
-		inv_image_seq = self.convert_set(expanded_set)
+			self.current_stim_dict['order'] = order.tolist()
 		self.load_sequence_to_dmd(inv_image_seq)
 
 	def load_sequence_to_dmd(self, inv_image_seq):
@@ -161,6 +167,9 @@ class DMD():
 		self.core.start_slm_sequence(self.name)
 
 	def run_current_sequence(self, stim_dict, sweep_reps=1, start_mies=False):
+		'''
+		Run the image sequence currently loaded to the DMD with the shutter params specificied in stim_dict.
+		'''
 		self.core.stop_slm_sequence(self.name) ##stop and restart ongoing sequence so that first frame is as expected
 		self.core.start_slm_sequence(self.name)
 		self.shutter.set_properties(stim_dict)
@@ -168,7 +177,8 @@ class DMD():
 		next_sweep_list = list(range(next_sweep, next_sweep+sweep_reps))
 		stim_dict['sweep'] = next_sweep_list
 		order = np.array(stim_dict['order'])
-		if len(order) == 1:
+		n_images = len(order)
+		if n_images == 1:
 			igor.dmd_frame_ephys_prep(stimset_name=stim_dict['sequence_name'], 
 			order=order, order_name=stim_dict['order_name'], sweep_reps=sweep_reps)
 		else:
@@ -180,6 +190,9 @@ class DMD():
 		self.stim_id += 1
 
 	def run_current_img(self, stim_dict, start_mies=False):
+		'''
+		Run the image currently loaded to the DMD with shutter params specified in stim_dict.
+		'''
 		order = np.array(stim_dict['order'])
 		assert len(order) == 1, f"length of order is {len(order)}. Expected length==1"
 		self.shutter.set_properties(stim_dict)
