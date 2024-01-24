@@ -98,6 +98,7 @@ class DMD():
        [-1.00271597e-02, -1.33515581e+00,  9.19894155e+02],
        [-1.49952232e-05, -7.57511198e-06,  1.01971023e+00]])
 		self.current_stim_sequence = None
+		self.current_ss_order = None
 		self.current_stim_dict = None
 		self.sequence_loaded = False
 
@@ -108,7 +109,7 @@ class DMD():
 	def update_stim_dict(self, stim_dict):
 		self.current_stim_dict = stim_dict
 
-	def collect_dmd_params(self, stim_sequence_set, order_name='default', stim_amp=50, stim_duration=50, repeatCnt=1, isi=100):
+	def collect_dmd_params(self, stim_sequence_set, order_name='default', stim_amp=50, stim_duration=50, repeatCnt=1, isi=100, seq_int=100):
 		'''
 		assembles parameters of dmd stimulation into one dictionary. 
 		'''
@@ -124,7 +125,10 @@ class DMD():
 		
 		##dmd sequence params
 		sequence_name = stim_sequence_set.name
-		order = stim_sequence_set.sequence_dict[order_name].tolist()
+		if self.current_ss_order.any():
+			order = self.current_ss_order.tolist()
+		else:
+			order = stim_sequence_set.sequence_dict[order_name].tolist()
 		
 		##timing and alignment info
 		now = str(datetime.datetime.now())
@@ -132,10 +136,10 @@ class DMD():
 		mies_name = igor.get_mies_name()
 		stim_id = self.stim_id
 		
-		param_list = [t1, t2, t3, i1, i2, i3, repeatCnt, 
+		param_list = [t1, t2, t3, i1, i2, i3, repeatCnt, seq_int,
 		next_sweep, stim_id, sequence_name, order_name, order, now, mies_name]
 		
-		param_name_list = ["t1", "t2", "t3", "i1", "i2", "i3", "repeatCnt", 
+		param_name_list = ["t1", "t2", "t3", "i1", "i2", "i3", "repeatCnt", "sequence_interval",
 		"sweep", "stim_id", "sequence_name", "order_name", "order", "time_stim", "mies_name"]
 		
 		stim_dict = dict(zip(param_name_list, param_list))
@@ -147,14 +151,16 @@ class DMD():
 		Prepare an ordered sequence of images by expanding to match target_n (if needed), convert to DMD pixel space, and load to DMD.
 		'''
 		image_seq = self.current_stim_sequence.get_ordered_seq(order)
-		if len(order>target_n):
+		if len(order) < target_n:
 			expanded_set, order = self.pad_sequence(image_seq, order, target_n, with_reps=True)
 			inv_image_seq = self.convert_set(expanded_set)
 		else:
 			inv_image_seq = self.convert_set(image_seq)
+
 		if self.current_stim_dict:
 			self.current_stim_dict['order'] = order.tolist()
 		self.load_sequence_to_dmd(inv_image_seq)
+		self.current_ss_order = order
 
 	def load_sequence_to_dmd(self, inv_image_seq):
 		'''
@@ -165,6 +171,7 @@ class DMD():
 		self.core.load_slm_sequence(self.name, inv_image_seq)
 		self.core.wait_for_device(self.name)
 		self.core.start_slm_sequence(self.name)
+		self.sequence_loaded = True
 
 	def run_current_sequence(self, stim_dict, sweep_reps=1, start_mies=False):
 		'''
@@ -176,14 +183,15 @@ class DMD():
 		next_sweep = igor.get_next_sweep()
 		next_sweep_list = list(range(next_sweep, next_sweep+sweep_reps))
 		stim_dict['sweep'] = next_sweep_list
-		order = np.array(stim_dict['order'])
+		order = self.current_ss_order
+		seq_int = stim_dict['sequence_interval']
 		n_images = len(order)
 		if n_images == 1:
 			igor.dmd_frame_ephys_prep(stimset_name=stim_dict['sequence_name'], 
 			order=order, order_name=stim_dict['order_name'], sweep_reps=sweep_reps)
 		else:
 			igor.dmd_sequence_ephys_prep(stimset_name=stim_dict['sequence_name'], 
-			order=order, order_name=stim_dict['order_name'], sweep_reps=sweep_reps)
+			order=order, order_name=stim_dict['order_name'], sweep_reps=sweep_reps, n_images=n_images, seq_int=seq_int)
 		update_photostim_log(stim_dict)
 		if start_mies:
 			igor.start_DAQ()

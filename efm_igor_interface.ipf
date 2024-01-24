@@ -114,15 +114,16 @@ Function generic_dmd_prep(sweep_number, stimset_name, route, route_name, sweep_r
 end
 
 //DAQ settings specific to sequences of photostimuli
-Function dmd_sequence_ephys_prep(sweep_number, stimset_name, route, route_name, sweep_reps) 
-	variable sweep_number, sweep_reps
+Function dmd_sequence_ephys_prep(sweep_number, stimset_name, route, route_name, sweep_reps, n_images, seq_int) 
+	variable sweep_number, sweep_reps, n_images, seq_int
 	string stimset_name, route, route_name
 	generic_dmd_prep(sweep_number, stimset_name, route, route_name, sweep_reps)
 	//set TTL channels
 	PGC_setandactivatecontrol("Dev1", "Check_TTL_00", val=1) 
 	PGC_setandactivatecontrol("Dev1", "Check_TTL_01", val=1)
 	string all_TTLs=ST_GetStimsetList(channelType = CHANNEL_TYPE_TTL)
-	variable TTL_num = whichListItem("ttlRep120_TTL_0", all_TTLs)+1
+	make_ttl_custom_wave(n_images, seq_int, 500, 1000) 
+	variable TTL_num = whichListItem("ttl_custom_TTL_0", all_TTLs)+1
 	PGC_setandactivatecontrol("Dev1", "Wave_TTL_00", val=TTL_num)
 	PGC_setandactivatecontrol("Dev1", "Wave_TTL_01", val=TTL_num)
 	//set DA channels
@@ -154,7 +155,7 @@ Function make_ttl_custom_wave(n_stim, interval, pre_time, post_time)
 	variable n_stim, interval, pre_time, post_time
 	variable pulse_duration = 5
 	variable min_samp = 0.005
-	variable train_duration = (n_stim*pulse_duration + n_stim*interval)
+	variable train_duration = (n_stim*interval)
 	variable wave_duration = pre_time + train_duration + post_time
 	variable wave_p = wave_duration/min_samp
 	variable pre_p = pre_time/min_samp
@@ -166,7 +167,7 @@ Function make_ttl_custom_wave(n_stim, interval, pre_time, post_time)
 	SetScale/P x 0,0.005,"ms", ttl_custom
 	variable i, start_p, stop_p
 	for(i=0; i<n_stim; i+=1)
-		start_p = pre_p + i*(pulse_p+interval_p)
+		start_p = pre_p + i*(interval_p)
 		stop_p = start_p + pulse_p
 		ttl_custom[start_p, stop_p] = 1
 	endfor

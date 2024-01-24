@@ -46,10 +46,19 @@ class IgorZmq(object):
                 rec = self.send_receive("isDAQhappening", [])
                 return rec['result']['value']
 
-        def dmd_sequence_ephys_prep(self, stimset_name="", order="", order_name="", sweep_reps=1):
+        def dmd_sequence_ephys_prep(self, stimset_name="", order="", order_name="", sweep_reps=1, n_images=1, seq_int=100):
                 next_sweep = self.get_next_sweep()
-                order_str = self.array_to_igor_list(order)
-                rec = self.send_receive("dmd_sequence_ephys_prep", [next_sweep, stimset_name, order_str, order_name, sweep_reps])
+                order_str = self.array_to_igor_list(order[:120])
+                if len(order)>120:
+                        order_str = order_str + "order truncated see photostim_log;"
+                ##note: use of order_str to send the order of stimuli to Igor works for n<=120, breaks when n~>248. (Python hangs waiting to receive Igor message.) 
+                ##Directly calling (within Igor console) the Igor function dmd_sequence_ephys_prep with large string pasted works OK. Appears the function never is called when
+                ##using ZMQ with a long order_str. Cursory reading of pyzmq doc's suggest message limit is very large and not the issue. Issue with Igor XOP?
+                ##As pilot analyses are ongoing in Python using photostim_log.json and nwb (rather than Igor), and full-fledged work will likely stay there,
+                ##here I truncate the order as temp fix. Alts for future - have look-up table for Igor to convert order_name to order; point Igor to photostim_log.json
+                ##or other file to read in order. Explore sending arrays to Igor as arguments via zmq (conversion to string found to be most viable solution initially).
+                rec = self.send_receive("dmd_sequence_ephys_prep", [next_sweep, stimset_name, order_str, order_name, sweep_reps, n_images, seq_int])
+                
 
         def dmd_frame_ephys_prep(self, stimset_name="", order="", order_name="", sweep_reps=1):
                 next_sweep = self.get_next_sweep()

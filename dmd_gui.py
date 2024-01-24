@@ -49,7 +49,7 @@ class DmdGUI(object):
 			width=spinbox_width)
 		reps_spin.grid(column=1, row=sp_row_start+2)
 
-		ttk.Label(mainframe, text='ISI:').grid(column=0, row=sp_row_start+3)
+		ttk.Label(mainframe, text='pulse interval:').grid(column=0, row=sp_row_start+3)
 		self.ISI_var = IntVar(value=100)
 		ISI_spin = ttk.Spinbox(
 			mainframe,
@@ -59,7 +59,17 @@ class DmdGUI(object):
 			width=spinbox_width)
 		ISI_spin.grid(column=1, row=sp_row_start+3)
 
-		ttk.Label(mainframe, text='sweep reps:').grid(column=0, row=sp_row_start+4)
+		ttk.Label(mainframe, text='seq interval:').grid(column=0, row=sp_row_start+4)
+		self.seq_interval_var = IntVar(value=100)
+		seq_int_spin = ttk.Spinbox(
+			mainframe,
+			from_=10,
+			increment=10,
+			textvariable=self.seq_interval_var,
+			width=spinbox_width)
+		seq_int_spin.grid(column=1, row=sp_row_start+4)
+
+		ttk.Label(mainframe, text='sweep reps:').grid(column=0, row=sp_row_start+5)
 		self.sweep_reps_var = IntVar(value=1)
 		sweep_reps_spin = ttk.Spinbox(
 			mainframe,
@@ -67,7 +77,7 @@ class DmdGUI(object):
 			to=1000,
 			textvariable=self.sweep_reps_var,
 			width=spinbox_width)
-		sweep_reps_spin.grid(column=1, row=sp_row_start+4)
+		sweep_reps_spin.grid(column=1, row=sp_row_start+5)
 
 		ss_list = find_StimSequences()
 		ttk.Label(mainframe, text='stim sequence').grid(column=2, row=0)
@@ -116,11 +126,12 @@ class DmdGUI(object):
 		dur = self.dur_var.get()
 		reps = self.reps_var.get()
 		isi = self.ISI_var.get()
+		seq_int = self.seq_interval_var.get()
 		sweep_reps = self.sweep_reps_var.get()
 		order_name = self.order_var.get()
 		start_mies = self.start_mies_var.get()
 		stim_dict = self.dmd.collect_dmd_params(self.dmd.current_stim_sequence, order_name, 
-			stim_amp=amp, stim_duration=dur, repeatCnt=reps, isi=isi)
+			stim_amp=amp, stim_duration=dur, repeatCnt=reps, isi=isi, seq_int=seq_int)
 		self.dmd.run_current_sequence(stim_dict, sweep_reps, start_mies)
 
 	def update_dmd_current_ss(self, event):
