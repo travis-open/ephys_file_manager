@@ -24,7 +24,7 @@ def make_new_day(base_dir=r"C:\Data", i=0):
 		newpath.mkdir()
 		os.chdir(newpath)
 	else:
-		i+=1
+		i += 1
 		make_new_day(base_dir=base_dir, i=i)
 	
 def make_new_slice(i=0):
@@ -37,9 +37,9 @@ def make_new_slice(i=0):
 		i (iterative integer): defaults to 0. If a folder already exists with passed value, iterate to next integer
 
 	"""
-	if i>999:  ##should not have 1000 slices
+	if i > 999:  ##should not have 1000 slices
 		raise ValueError('slice i greater than 1000 not supported')
-	cwd=Path.cwd()
+	cwd = Path.cwd()
 	if cwd.parts[-1][-8:-4]=='site': ##if currently in site folder move up to day folder to make new slice 
 		os.chdir('../../')
 	if cwd.parts[-1][-9:-4]=='slice': ##if currently in slice folder move up to day
@@ -49,7 +49,7 @@ def make_new_slice(i=0):
 		newpath.mkdir()
 		os.chdir(newpath)
 	else:					#if path exists, increase slice number
-		i+=1
+		i += 1
 		make_new_slice(i)
 
 def make_new_site(i=0):
@@ -62,7 +62,7 @@ def make_new_site(i=0):
 		i (iterative integer): defaults to 0. If a folder already exists with passed value, iterate to next integer
 
 	"""
-	if i>999:
+	if i > 999:
 		raise ValueError('site i greater than 1000 not supported')
 	cwd = Path.cwd()
 	if cwd.parts[-1][-8:-4]=='site': ##if currently in site folder move up to day folder to make new slice
@@ -148,10 +148,10 @@ class DirectoryGUI(object):
 
 		ttk.Button(mainframe, text="set base", command=self.base_up).grid(column=4, row=0)
 		
-		self.HS0_var=IntVar()
-		self.HS1_var=IntVar()
-		HS0_cb=ttk.Checkbutton(mainframe, text='HS0', variable=self.HS0_var).grid(column=2,row=3)
-		HS1_cb=ttk.Checkbutton(mainframe, text='HS1', variable=self.HS1_var).grid(column=2,row=4)
+		self.HS0_var = IntVar()
+		self.HS1_var = IntVar()
+		HS0_cb = ttk.Checkbutton(mainframe, text='HS0', variable=self.HS0_var).grid(column=2,row=3)
+		HS1_cb = ttk.Checkbutton(mainframe, text='HS1', variable=self.HS1_var).grid(column=2,row=4)
 		
 		ttk.Button(mainframe, text="new site", command=self.new_site_up).grid(column=2, row=2)
 		ttk.Label(mainframe, text="pipette:").grid(column=3,row=2)
@@ -205,7 +205,7 @@ class DirectoryGUI(object):
 		"""
 		Returns full sliceID (with animal ID preceeding)
 		"""
-		slice_ID=self.animalIDvar.get()+'.slice-'+self.sliceIDvar.get()
+		slice_ID = self.animalIDvar.get()+'.slice-'+self.sliceIDvar.get()
 		return slice_ID
 
 	def return_site_ID(self):
@@ -213,21 +213,21 @@ class DirectoryGUI(object):
 		Returns full siteID (with animal ID and slice ID preceding)
 		"""
 		if self.directory_level == 'site':
-			slice_ID=self.return_slice_ID()
-			site_ID=slice_ID+'.'+self.active_dir.get()[-8:]
+			slice_ID = self.return_slice_ID()
+			site_ID = slice_ID+'.'+self.active_dir.get()[-8:]
 			return site_ID
 		else:
 			return None
 
 	def save_meta_button(self):
-		slice_ID=self.return_slice_ID()
-		site_ID=self.return_site_ID()
-		phys_file_path=self.active_dir.get()
-		site_dict=self.collect_site_data()
+		slice_ID = self.return_slice_ID()
+		site_ID = self.return_site_ID()
+		phys_file_path = self.active_dir.get()
+		site_dict = self.collect_site_data()
 		upload_md('site', site_dict)
 		update_md('site.json', site_dict)
 		if self.HS0_var.get():
-			cell0_dict={
+			cell0_dict = {
 			'site_ID': site_ID,
 			'cell_ID': site_ID+'.HS0',
 			'headstage': 0,
@@ -239,7 +239,7 @@ class DirectoryGUI(object):
 			update_md('cell0.json', cell0_dict)
 			upload_md('cell', cell0_dict, col_match='cell_ID')
 		if self.HS1_var.get():
-			cell1_dict={
+			cell1_dict = {
 			'site_ID': site_ID,
 			'cell_ID': site_ID+'.HS1',
 			'headstage': 1,
@@ -250,43 +250,43 @@ class DirectoryGUI(object):
 			}
 			update_md('cell1.json', cell1_dict)
 			upload_md('cell', cell1_dict, col_match='cell_ID')
-		slice_dict=self.collect_slice_data()
-		slice_json_path=self.slice_directory+r"\slice.json"
+		slice_dict = self.collect_slice_data()
+		slice_json_path = self.slice_directory+r"\slice.json"
 		update_md(slice_json_path, slice_dict)
 		upload_md('slice', slice_dict)
 				
 	def base_up(self):
-		target_base=self.base_dir.get()
-		target_base=target_base.strip('\"')
+		target_base = self.base_dir.get()
+		target_base = target_base.strip('\"')
 		os.chdir(target_base)
-		self.directory_level='base'	
+		self.directory_level = 'base'	
 	
 	def new_day_up(self):
 		make_new_day(base_dir=self.base_dir.get().strip('\"'))
 		self.update_active()
-		self.day_directory=os.getcwd()
-		self.directory_level='day'
+		self.day_directory = os.getcwd()
+		self.directory_level = 'day'
 	
 	def new_slice_up(self):
-		if self.directory_level=='day':
-			day_dict=self.collect_day_data()
-			day_json_path=self.day_directory+r"\day.json"
+		if self.directory_level == 'day':
+			day_dict = self.collect_day_data()
+			day_json_path = self.day_directory+r"\day.json"
 			upload_md('day', day_dict)
 			update_md(day_json_path, day_dict)
 			animal_dict = self.collect_animal_data()
 			upload_md('animal', animal_dict, col_match='animal_ID')
 		
-		if self.directory_level=='slice':
-			slice_dict=self.collect_slice_data()
+		if self.directory_level == 'slice':
+			slice_dict = self.collect_slice_data()
 			upload_md('slice', slice_dict)
 			update_md('slice.json', slice_dict)
 
-		if self.directory_level=='site':
-			slice_dict=self.collect_slice_data()
+		if self.directory_level == 'site':
+			slice_dict = self.collect_slice_data()
 			upload_md('slice', slice_dict)
-			slice_json_path=self.slice_directory+r"\slice.json"
+			slice_json_path = self.slice_directory+r"\slice.json"
 			update_md(slice_json_path, slice_dict)
-			site_dict=self.collect_site_data()
+			site_dict = self.collect_site_data()
 			upload_md('site', site_dict)
 			update_md('site.json', site_dict)
 
@@ -298,33 +298,33 @@ class DirectoryGUI(object):
 		
 		make_new_slice()
 		self.update_active()
-		self.slice_rig_time=self.new_dir_time
-		self.slice_directory=os.getcwd()
-		self.directory_level='slice'
+		self.slice_rig_time = self.new_dir_time
+		self.slice_directory = os.getcwd()
+		self.directory_level = 'slice'
 
 	def new_site_up(self):
 		##slice information may have been updated, collect and store
-		slice_dict=self.collect_slice_data()
+		slice_dict = self.collect_slice_data()
 		upload_md('slice', slice_dict)
-		slice_json_path=self.slice_directory+r"\slice.json"
+		slice_json_path = self.slice_directory+r"\slice.json"
 		update_md(slice_json_path, slice_dict)
-		if self.directory_level=='site':
-			site_dict=self.collect_site_data()
+		if self.directory_level == 'site':
+			site_dict = self.collect_site_data()
 			upload_md('site', site_dict)
 			update_md('site.json', site_dict)
 		self.reset_cell_info()
 		make_new_site()
 		self.directory_level = 'site'
 		self.update_active()
-		site_ID=self.return_site_ID()
-		phys_file_path=self.active_dir.get()
-		site_dict=self.collect_site_data()
+		site_ID = self.return_site_ID()
+		phys_file_path = self.active_dir.get()
+		site_dict = self.collect_site_data()
 		upload_md('site', site_dict)
 		update_md('site.json', site_dict)
 		
 
 	def collect_day_data(self):
-		day_dict={
+		day_dict = {
 		'animal_ID': self.animalIDvar.get(),
 		'species': self.speciesvar.get(),
 		'phys_file_path': self.day_directory,
@@ -333,18 +333,18 @@ class DirectoryGUI(object):
 		return day_dict
 
 	def collect_animal_data(self):
-		animal_dict={
+		animal_dict = {
 		'animal_ID': self.animalIDvar.get(),
 		'species': self.speciesvar.get(),
 		}
 		return animal_dict
 	
 	def collect_slice_data(self):
-		slice_ID=self.return_slice_ID()
+		slice_ID = self.return_slice_ID()
 		##make slice_rig_time human format
 		t=time.localtime(self.slice_rig_time)
-		slice_time=time.strftime("%Y-%m-%d %H:%M:%S", t)
-		slice_dict={
+		slice_time = time.strftime("%Y-%m-%d %H:%M:%S", t)
+		slice_dict = {
 		'slice_ID': slice_ID,
 		'animal_ID': self.animalIDvar.get(),
 		'well_ID': self.wellIDvar.get(),
@@ -356,10 +356,10 @@ class DirectoryGUI(object):
 		return slice_dict
 
 	def collect_site_data(self):
-		slice_ID=self.return_slice_ID()
-		site_ID=self.return_site_ID()
-		phys_file_path=self.active_dir.get()
-		site_dict={
+		slice_ID = self.return_slice_ID()
+		site_ID = self.return_site_ID()
+		phys_file_path = self.active_dir.get()
+		site_dict = {
 		'slice_ID':slice_ID ,
 		'phys_file_path': phys_file_path,
 		'site_ID': site_ID,
@@ -373,20 +373,20 @@ class DirectoryGUI(object):
 		self.new_dir_time = time.time()
 	
 	def set_cwd_manual(self):
-		target_wd=self.active_dir.get()
-		target_wd=target_wd.strip('\"')
+		target_wd = self.active_dir.get()
+		target_wd = target_wd.strip('\"')
 		os.chdir(target_wd)
 		self.new_dir_time = time.time()
-		target_wd=Path(target_wd)
-		warn=True
-		if target_wd.parts[-1][-8:-4]=='site':
-			self.slice_directory=target_wd.parents[0]
-			self.day_directory=target_wd.parents[1]
+		target_wd = Path(target_wd)
+		warn = True
+		if target_wd.parts[-1][-8:-4] == 'site':
+			self.slice_directory = target_wd.parents[0]
+			self.day_directory = target_wd.parents[1]
 			warn=False
-		if target_wd.parts[-1][-9:-4]=='slice':
-			self.slice_directory=target_wd
-			self.day_directory=target_wd.parents[0]
-			warn=False
+		if target_wd.parts[-1][-9:-4] == 'slice':
+			self.slice_directory = target_wd
+			self.day_directory = target_wd.parents[0]
+			warn = False
 		if warn:
 			print("warning - manual directory not recognized as slice or site folder")
 
@@ -411,7 +411,7 @@ def last_mod_time(fname):
 	return os.path.getmtime(fname)
 
 def copy_files_since_tstamp(tstamp, src, dst):
-	src=os.path.abspath(src)
+	src = os.path.abspath(src)
 	for fname in os.listdir(src):
 		src_fname = os.path.join(src, fname)
 		if last_mod_time(src_fname) > tstamp:
@@ -425,9 +425,9 @@ def copy_files_since_tstamp(tstamp, src, dst):
 
 if __name__ == '__main__':
 	root = Tk()
-	app=DirectoryGUI(root)
-	image_window=Toplevel(root)
-	ImageApp=ImageGUI(image_window, app)
+	app = DirectoryGUI(root)
+	image_window = Toplevel(root)
+	ImageApp = ImageGUI(image_window, app)
 	
 	root.mainloop()
 

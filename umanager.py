@@ -1,6 +1,6 @@
 """
-Code for controlling Polygon 400 DMD largely based on: https://gitlab.com/dunloplab/pycromanager/-/blob/master/pycromanager_tessie/microscope/dmd.py?ref_type=heads
-Thank you to Jean-Baptiste Lugagne and other contributors.
+Code for controlling and calibrating Polygon 400 DMD largely based on: https://gitlab.com/dunloplab/pycromanager/-/blob/master/pycromanager_tessie/microscope/dmd.py?ref_type=heads
+With some mods for hardware and application differences. Thank you to Jean-Baptiste Lugagne and other contributors.
 """
 
 
@@ -44,7 +44,6 @@ def snap_save_image(dir_path):
 	Snap micro-manager image with all current settings. Save as tiff and save json with associated metadata.
 	Returns the name of the tiff file.
 	'''
-	##can't snap if live mode is on. Check current mode, stop, snap, process, save, reset mode
 	image, md = snap_image()
 	filename = "img_"+str(int(time.time()))
 	tfile = filename+'.tif'
