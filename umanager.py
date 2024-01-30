@@ -101,6 +101,17 @@ class DMD():
 		self.current_ss_order = None
 		self.current_stim_dict = None
 		self.sequence_loaded = False
+		self.current_objective = None
+		self.current_magnifier = None
+		self.get_objective()
+
+	def get_objective(self):
+		objective = self.core.get_property('DObjective','Label')
+		self.current_objective = objective
+
+	def get_mag(self):
+		mag = self.core.get_property('DOptovar', 'Zoom')
+		self.current_magnifier = mag
 
 	def update_stim_sequence(self, filename):
 		stim_sequence_set = load_stim_sequence_file(filename)
@@ -135,12 +146,17 @@ class DMD():
 		next_sweep = [igor.get_next_sweep()]
 		mies_name = igor.get_mies_name()
 		stim_id = self.stim_id
+
+		self.get_objective()
+		objective = self.current_objective
+		self.get_mag()
+		mag = self.current_magnifier
 		
 		param_list = [t1, t2, t3, i1, i2, i3, repeatCnt, seq_int,
-		next_sweep, stim_id, sequence_name, order_name, order, now, mies_name]
-		
+		next_sweep, stim_id, sequence_name, order_name, order, now, mies_name, objective, mag]
+
 		param_name_list = ["t1", "t2", "t3", "i1", "i2", "i3", "repeatCnt", "sequence_interval",
-		"sweep", "stim_id", "sequence_name", "order_name", "order", "time_stim", "mies_name"]
+		"sweep", "stim_id", "sequence_name", "order_name", "order", "time_stim", "mies_name", "objective", "magnifier"]
 		
 		stim_dict = dict(zip(param_name_list, param_list))
 		return stim_dict
