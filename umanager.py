@@ -75,6 +75,7 @@ class Shutter():
 		self.set_prop("mode", "TRIGGER")
 		for k, v in stim_dict.items():
 			if k in shutter_list:
+				assert v >= 0, f"All shutter parameters must be >=0. Param {k} has value {v}"
 				self.set_prop(k, v)
 				self.core.wait_for_device(self.name)		
 		self.core.set_shutter_open(True) ##required for changes to take effect and BLS device to be responsive
@@ -128,9 +129,10 @@ class DMD():
 		t1 = 10000 #t1 = 10 ms, lag shutter to ensure mirror movement 
 		t2 = int(stim_duration * 1000) ##t2 convert stim duration to us
 		if repeatCnt == 1:
-			t3 = 0
+			t3 = 1 ##shutter misbehaves when t3=0
 		else:
 			t3 = int(isi * 1000 - (t1 + t2)) ##convert isi to us, subtract t1 and t2 so that time is start to start
+			assert t3 > 0, f"Calculated value of t3 <= 0. Pulse interval/ISI incompatible with duration."
 		i1, i2, i3 = 0, stim_amp, 0
 		
 		##dmd sequence params
