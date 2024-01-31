@@ -18,7 +18,7 @@ class DmdGUI(object):
 		spinbox_width = 5
 
 		sp_row_start = 0 ##shutter params row start
-		ttk.Label(mainframe, text='amp:').grid(column=0, row=sp_row_start+0)
+		ttk.Label(mainframe, text='amplitude:').grid(column=0, row=sp_row_start+0)
 		self.amp_var = IntVar(value=10)
 		amp_spin = ttk.Spinbox(
 			mainframe,
@@ -28,7 +28,7 @@ class DmdGUI(object):
 			width=spinbox_width)
 		amp_spin.grid(column=1, row=sp_row_start+0)
 
-		ttk.Label(mainframe, text='dur:').grid(column=0, row=sp_row_start+1)
+		ttk.Label(mainframe, text='duration:').grid(column=0, row=sp_row_start+1)
 		self.dur_var = IntVar(value=1)
 		dur_spin = ttk.Spinbox(
 			mainframe, 
@@ -93,7 +93,7 @@ class DmdGUI(object):
 		self.order_combo.grid(column=3, row=1)
 
 		ttk.Button(mainframe, text='all pixels on', command=self.dmd.all_pixels_on).grid(column=2, row=4)
-		ttk.Button(mainframe, text='run current seq', command=self.run_current_seq).grid(column=0, row=sp_row_start+5)
+		ttk.Button(mainframe, text='run current seq', command=self.run_current_seq).grid(column=0, row=sp_row_start+6)
 		ttk.Button(mainframe, text='load seq', command=self.load_seq_dmd_gui).grid(column=3, row=4)
 		ttk.Button(mainframe, text='stop', command=self.dmd.stop_sequence).grid(column=2, row=5)
 		ttk.Button(mainframe, text='load frame', command=self.load_frame_dmd_gui).grid(column=3, row=5)
