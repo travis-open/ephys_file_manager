@@ -88,8 +88,11 @@ class DirectoryGUI(object):
 
 		self.base_dir = StringVar()
 		self.base_dir.set(r"C:\Data")
+		self.directory_level = 'base'
 		self.active_dir = StringVar()
 		self.new_dir_time = time.time()
+		self.slice_rig_time = None
+		
 
 		ttk.Label(mainframe, text="base").grid(column=0, row=0)
 		ttk.Label(mainframe, text="active").grid(column=0, row=1)
@@ -192,6 +195,18 @@ class DirectoryGUI(object):
 		ttk.Button(mainframe, text="DMD", command=self.launch_dmd).grid(column=5, row=7)
 		ttk.Button(mainframe, text="notepad", command = self.launch_np).grid(column=5, row=8)
 		self.directory_level='base' ##can be 'base', 'day', 'slice', 'site'
+		self.label_to_var_dict = {'animal_ID':self.animalIDvar,
+									'species':self.speciesvar,
+									'project':self.projectvar,
+									'slice_ID':self.sliceIDvar,
+									'well_ID':self.wellIDvar,
+									'slice_rig_time':self.slice_rig_time,
+									'orientation':self.orientationvar,
+									'external_solution':self.externalIDvar,
+									'region':self.regionVar
+
+		}
+
 
 	def launch_np(self):
 		notepad_window = Toplevel(self.root)
@@ -378,17 +393,40 @@ class DirectoryGUI(object):
 		os.chdir(target_wd)
 		self.new_dir_time = time.time()
 		target_wd = Path(target_wd)
-		warn = True
 		if target_wd.parts[-1][-8:-4] == 'site':
 			self.slice_directory = target_wd.parents[0]
 			self.day_directory = target_wd.parents[1]
-			warn=False
-		if target_wd.parts[-1][-9:-4] == 'slice':
+			self.directory_level = 'site'
+		elif target_wd.parts[-1][-9:-4] == 'slice':
 			self.slice_directory = target_wd
 			self.day_directory = target_wd.parents[0]
-			warn = False
-		if warn:
-			print("warning - manual directory not recognized as slice or site folder")
+			self.directory_level = 'slice'
+		elif target_wd.parts[-1][:2] == '20':
+			##bit clumsy solution. Try to come up with something before. At least before 2100.
+			self.day_directory = target_wd
+			self.directory_level = 'day'
+		else:
+			print("warning - manual directory not recognized as day, slice or site folder")
+		existing_dict = self.find_existing_metadata_json()
+		for k, v in existing_dict.items():
+			if k in self.label_to_var_dict.keys():
+				obj_var = self.label_to_var_dict[k]
+				obj_var.set(v)
+		self.root.update_idletasks()
+
+
+	def find_existing_metadata_json(self):
+		'''Look for existing json file with name consistent with current directory level. e.g. "slice.json"'''
+		directory_level_list = ['day', 'slice', 'site']
+		assert self.directory_level in directory_level_list, f"directory level {self.directory_level} is not in {directory_level_list}"
+		json_file_name = self.directory_level + '.json'
+		existing_dict = {}
+		try:
+			with open(json_file_name) as f:
+				existing_dict=json.load(f)
+		except:
+			print (f"{json_file_name} not found when looking for existing metadata json")
+		return existing_dict
 
 	def copy_files_button(self):
 		dst = os.getcwd()
