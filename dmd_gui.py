@@ -102,7 +102,7 @@ class DmdGUI(object):
 		self.load_state = ttk.Label(mainframe, textvariable=self.load_state_text).grid(column=3, row=3)
 
 		self.start_mies_var = IntVar()
-		mies_cb = ttk.Checkbutton(mainframe, text='start MIES', variable=self.start_mies_var).grid(column=1,row=5, padx=10)
+		mies_cb = ttk.Checkbutton(mainframe, text='start MIES', variable=self.start_mies_var).grid(column=1,row=6, padx=10)
 
 
 	def load_seq_dmd_gui(self):

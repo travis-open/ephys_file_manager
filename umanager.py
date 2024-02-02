@@ -104,6 +104,8 @@ class DMD():
 		self.current_objective = None
 		self.current_magnifier = None
 		self.get_objective()
+		self.get_mag()
+		self.reference_image = None
 
 	def get_objective(self):
 		objective = self.core.get_property('DObjective','Label')
