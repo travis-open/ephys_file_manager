@@ -75,7 +75,7 @@ def make_new_site(i=0):
 		i += 1
 		make_new_site(i)
 
-animal_ID_list = fetch_existing_values('animal', 'animal_ID')
+
 
 class DirectoryGUI(object):
 	def __init__(self, root):
@@ -92,7 +92,7 @@ class DirectoryGUI(object):
 		self.active_dir = StringVar()
 		self.new_dir_time = time.time()
 		self.slice_rig_time = None
-		
+		self.animal_ID_list = fetch_existing_values('animal', 'animal_ID')
 
 		ttk.Label(mainframe, text="base").grid(column=0, row=0)
 		ttk.Label(mainframe, text="active").grid(column=0, row=1)
@@ -100,9 +100,10 @@ class DirectoryGUI(object):
 		
 		ttk.Label(mainframe, text="animal ID:").grid(column=0,row=3)
 		self.animalIDvar = StringVar()
-		animalID = ttk.Combobox(mainframe, textvariable=self.animalIDvar, width=10)
-		animalID.grid(column=0, row=4)
-		animalID['values'] = animal_ID_list
+		self.animalID = ttk.Combobox(mainframe, textvariable=self.animalIDvar, width=10, postcommand=self.fetch_animals)
+		self.animalID.grid(column=0, row=4)
+		self.animalID['values'] = self.animal_ID_list
+
 
 		ttk.Label(mainframe, text="species:").grid(column=0, row=5)
 		self.speciesvar = StringVar()
@@ -206,6 +207,10 @@ class DirectoryGUI(object):
 									'region':self.regionVar
 
 		}
+
+	def fetch_animals(self):
+		self.animal_ID_list = fetch_existing_values('animal', 'animal_ID')
+		self.animalID['values'] = self.animal_ID_list
 
 
 	def launch_np(self):
