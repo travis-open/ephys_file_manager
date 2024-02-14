@@ -1,13 +1,13 @@
+from tkinter import ttk, N, W, E, S, IntVar, StringVar
 from umanager import core, DMD, find_StimSequences
-from tkinter import *
-from tkinter import ttk
 
 class DmdGUI(object):
 	def __init__(self, root, parent):
 		self.parent = parent
 		self.root = root
 		self.root.title("DMD control")
-		self.dmd = DMD(core)
+		self.directory_manager = self.parent.dm
+		self.dmd = DMD(core, directory_manager=self.directory_manager)
 		self.StimSet_directory = 'C:/stimset_building/'
 		mainframe = ttk.Frame(self.root, padding = "3 3 12 12")
 		mainframe.grid(column=0, row=0, sticky=(N, W, E, S))

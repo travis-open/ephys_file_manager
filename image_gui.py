@@ -1,7 +1,6 @@
-from tkinter import *
-from tkinter import ttk
+from tkinter import ttk, N, W, E, S, IntVar, StringVar
 from pathlib import Path
-from metadata_upload import *
+from metadata_upload import upload_md
 from config import obj_list, mag_list, ill_list
 from umanager import core, studio, snap_save_image
 
@@ -38,6 +37,7 @@ class ImageGUI(object):
 		ill.bind("<<ComboboxSelected>>", self.update_micromanager)
 
 		ttk.Button(mainframe, text="capture, save meta", command=self.snap_and_save_to_ad).grid(column=0, row=2, columnspan=3)
+
 		root.bind_all('<F5>', self.change_objective)
 		root.bind_all('<F6>', self.change_mag)
 		root.bind_all('<F7>', self.change_illumination)
@@ -45,7 +45,7 @@ class ImageGUI(object):
 	def change_illumination(self, event):
 		current_ill = self.IlluminationVar.get()
 		current_index = ill_list.index(current_ill)
-		if current_index<len(ill_list)-1:
+		if current_index < len(ill_list)-1:
 			next_ill = ill_list[current_index+1]
 		else:
 			next_ill = ill_list[0]
@@ -84,24 +84,24 @@ class ImageGUI(object):
 		mag_val = float(self.MagVar.get()[:-1])
 		obj_val = float(self.ObjectiveVar.get()[:-1])
 		ill_val = self.IlluminationVar.get()
-		active_directory = self.parent.active_dir.get()
-		animal_id = self.parent.animalIDvar.get()
+		active_directory = self.parent.dm.active_directory
+		animal_id = self.parent.dm.animal_id
 		#slice_id = self.parent.sliceIDvar.get()
-		slice_id = self.parent.return_slice_ID()
-		site_id = self.parent.return_site_ID()
+		slice_id = self.parent.dm.slice_id
+		site_id = self.parent.dm.site_id
 		image_meta_dict = {
 		'objective': obj_val,
 		'magnification': mag_val,
 		'illumination': ill_val,
 		'full_path':dst_file,
-		'site_ID':site_id,
-		'slice_ID':slice_id,
-		'animal_ID':animal_id
+		'site_id':site_id,
+		'slice_id':slice_id,
+		'animal_id':animal_id
 		}
 		upload_md('image', image_meta_dict, force_append=True)
 
 	def snap_and_save_to_ad(self):
-		active_directory = self.parent.active_dir.get()
+		active_directory = self.parent.dm.active_directory
 		tfile = snap_save_image(active_directory)
 		self.im_md_up(str(tfile))
 

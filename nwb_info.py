@@ -1,43 +1,41 @@
+import json
+import glob
+from pathlib import Path
+from metadata_upload import upload_md
 from neuroanalysis.data.loaders.mies_dataset_loader import MiesNwbLoader
 from neuroanalysis.data.dataset import Dataset
-import numpy as np
-import glob
-import os
-from pathlib import Path
-from metadata_upload import *
-import json
-
 
 def pull_hs_stimset(nwbfilename):
     dataset = Dataset(loader=MiesNwbLoader(nwbfilename))
-    stim_list=set()
-    HS_list=set()
+    stim_list = set()
+    HS_list = set()
     for rec in dataset.all_recordings:
-        if rec.device_type=='MultiClamp 700':
+        if rec.device_type == 'MultiClamp 700':
             HS_list.add(rec.device_id)
             try:
-                s=rec.stimulus.description
+                s = rec.stimulus.description
             except:
-                s="unknown"
+                s = "unknown"
             stim_list.add(s)
     return {"HS_recorded":str(list(HS_list)), "protocols":str(list(stim_list))}
 
 def process_nwb(nwbfilename):
-    meta_dict=pull_hs_stimset(nwbfilename)
-    full_path=str(Path(nwbfilename).absolute())
-    meta_dict['full_path']=full_path
+    meta_dict = pull_hs_stimset(nwbfilename)
+    full_path = str(Path(nwbfilename).absolute())
+    meta_dict['full_path'] = full_path
     try:
-        with open('site.json') as json_file:
-            site_dict=json.load(json_file)
-            site_ID = site_dict['site_ID']
+        with open(nwbfilename.parent/'site.json') as json_file:
+            site_dict = json.load(json_file)
+            site_id = site_dict['site_id']
     except:
         site_ID = "unknown"
-    meta_dict['site_ID']=site_ID
+    meta_dict['site_id']=site_id
     upload_md('nwb', meta_dict, force_append=True)
 
-def process_nwb_in_dir():
-    directory = os.getcwd()
-    nwb_list=Path(directory).glob('*.nwb')
+def process_nwb_in_dir(directory=None):
+    if directory is None:
+        directory = Path.cwd()
+    nwb_list = Path(directory).glob('*.nwb')
     if not nwb_list:
         print("no nwb files found")
     else:

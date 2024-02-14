@@ -85,8 +85,9 @@ class Shutter():
 
 class DMD():
 
-	def __init__(self, core):
+	def __init__(self, core, directory_manager=None):
 		self.core = core
+		self.dm = directory_manager
 		self.name = self.core.get_slm_device()
 		self.h = self.core.get_slm_height(self.name)
 		self.w = self.core.get_slm_width(self.name)
@@ -211,7 +212,7 @@ class DMD():
 		else:
 			igor.dmd_sequence_ephys_prep(stimset_name=stim_dict['sequence_name'], 
 			order=order, order_name=stim_dict['order_name'], sweep_reps=sweep_reps, n_images=n_images, seq_int=seq_int)
-		update_photostim_log(stim_dict)
+		self.update_photostim_log(stim_dict)
 		if start_mies:
 			igor.start_DAQ()
 		self.stim_id += 1
@@ -226,7 +227,7 @@ class DMD():
 		next_sweep = [igor.get_next_sweep()]
 		igor.dmd_frame_ephys_prep(stimset_name=stim_dict['sequence_name'], 
 			order=order, order_name=stim_dict['order_name'])
-		update_photostim_log(stim_dict)
+		self.update_photostim_log(stim_dict)
 		if start_mies:
 			igor.start_DAQ()
 		self.stim_id += 1
@@ -283,6 +284,35 @@ class DMD():
 
 	def stop_sequence(self):
 		self.core.stop_slm_sequence(self.name)
+
+	def save_photostim_params(self, stim_dict):
+		filename = "photostim_log.json"
+		if self.dm != None:
+			dir_path = self.dm.active_directory
+		else:
+			dir_path = Path.cwd()
+		stim_name = "photostim_"+str(stim_dict["stim_id"])
+		main_dict = {stim_name:stim_dict}
+		with open(dir_path/filename, 'w') as f:
+			f.write(json.dumps(main_dict, indent=4))
+			f.close()
+
+	def update_photostim_log(self, stim_dict):
+		filename = "photostim_log.json"
+		if self.dm != None:
+			dir_path = self.dm.active_directory
+		else:
+			dir_path = Path.cwd()
+		try:
+			with open(dir_path/filename, 'r+') as f:
+				existing_dict = json.load(f)
+				stim_name = "photostim_"+str(stim_dict["stim_id"])
+				existing_dict[stim_name] = stim_dict
+				f.seek(0)
+				json.dump(existing_dict, f, indent=4)
+		except:
+			print(f"{dir_path/filename} not found")
+			self.save_photostim_params(stim_dict)
 
 	def _point_img(self, xy):
 
@@ -405,26 +435,7 @@ def centroid(contour, im_height=1024):
 	return cx,cy
 
 
-def save_photostim_params(stim_dict):
-	filename = "photostim_log.json"
-	stim_name = "photostim_"+str(stim_dict["stim_id"])
-	main_dict = {stim_name:stim_dict}
-	with open(filename, 'w') as f:
-		f.write(json.dumps(main_dict, indent=4))
-		f.close
 
-def update_photostim_log(stim_dict):
-	filename = "photostim_log.json"
-	try:
-		with open(filename, 'r+') as f:
-			existing_dict = json.load(f)
-			stim_name = "photostim_"+str(stim_dict["stim_id"])
-			existing_dict[stim_name] = stim_dict
-			f.seek(0)
-			json.dump(existing_dict, f, indent = 4)
-	except:
-		print(f"{filename} not found")
-		save_photostim_params(stim_dict)
 
 def find_StimSequences(directory = 'C:/stimset_building/'):
 	files = [x.stem for x in Path(directory).glob('*pickle') if x.is_file()]

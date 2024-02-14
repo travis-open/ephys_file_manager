@@ -1,479 +1,356 @@
-import os
-from datetime import date
-from tkinter import *
-from tkinter import ttk
-import time
+from pathlib import Path, PurePath
 import shutil
-from metadata_upload import *
-from image_gui import *
-from abf_meta import *
+import json
+from datetime import date, datetime
+
+from config import default_base_dir, src_list, rig_id
 from nwb_info import process_nwb_in_dir
-from pathlib import Path
-from config import src_list, species_list, project_list, ext_soln_list, brain_region_list, subregion_list, pip_soln_list, slice_id_list
-from notepad import NotepadGUI
-from dmd_gui import DmdGUI
-
-def make_new_day(base_dir=r"C:\Data", i=0):
-	"""
-	Makes a new directory with today's date. Sets it as working directory.
-
-	"""
-	today = str(date.today())+f"-{i:03}"
-	newpath = Path(base_dir)/today
-	if not newpath.exists():
-		newpath.mkdir()
-		os.chdir(newpath)
-	else:
-		i += 1
-		make_new_day(base_dir=base_dir, i=i)
-	
-def make_new_slice(i=0):
-	"""
-	Makes a new slice directory. 
-	If called when working directory is a slice or site folder, moves up to 'day'.
-	Sets new slice folder as working directory.
-
-	Arguments:
-		i (iterative integer): defaults to 0. If a folder already exists with passed value, iterate to next integer
-
-	"""
-	if i > 999:  ##should not have 1000 slices
-		raise ValueError('slice i greater than 1000 not supported')
-	cwd = Path.cwd()
-	if cwd.parts[-1][-8:-4]=='site': ##if currently in site folder move up to day folder to make new slice 
-		os.chdir('../../')
-	if cwd.parts[-1][-9:-4]=='slice': ##if currently in slice folder move up to day
-		os.chdir('../')
-	newpath = Path(f"slice-{i:03}") ##slice number padded to 3 digits
-	if not newpath.exists(): #make new directory and set path if it doesn't exist
-		newpath.mkdir()
-		os.chdir(newpath)
-	else:					#if path exists, increase slice number
-		i += 1
-		make_new_slice(i)
-
-def make_new_site(i=0):
-	"""
-	Makes a new site directory. 
-	If called when working directory is a site folder, moves up to 'site'.
-	Sets new site folder as working directory.
-
-	Arguments:
-		i (iterative integer): defaults to 0. If a folder already exists with passed value, iterate to next integer
-
-	"""
-	if i > 999:
-		raise ValueError('site i greater than 1000 not supported')
-	cwd = Path.cwd()
-	if cwd.parts[-1][-8:-4]=='site': ##if currently in site folder move up to day folder to make new slice
-		os.chdir('../')
-	newpath = Path(f"site-{i:03}")
-	if not newpath.exists(): #make new directory and set path if it doesn't exist
-		newpath.mkdir()
-		os.chdir(newpath)
-	else:
-		i += 1
-		make_new_site(i)
+from data_models import Animal, SliceRecDay, BrainSlice, RecordingSite, RecordedCell
 
 
 
-class DirectoryGUI(object):
-	def __init__(self, root):
-		self.root = root
-		self.root.title("directory control")
-		mainframe = ttk.Frame(root, padding = "3 3 12 12")
-		mainframe.grid(column=0, row=0, sticky=(N, W, E, S))
-		self.root.columnconfigure(0, weight=1)
-		self.root.rowconfigure(0, weight=1)
+class DirectoryManager(object):
+	"""Manages folder hierarchy and saving of metadata."""
+	def __init__(self, default_base_dir=default_base_dir, rig_id=rig_id):
 
-		self.base_dir = StringVar()
-		self.base_dir.set(r"C:\Data")
+		self.base_directory = Path(default_base_dir)
+		self.rig_id = rig_id
+		self.active_directory = None
 		self.directory_level = 'base'
-		self.active_dir = StringVar()
-		self.new_dir_time = time.time()
+		self.new_dir_time = None
+		self.src_list = src_list
+		##day (SliceRecordingDay) attributes
+		self.animal_id = None
+		self.project = None
+		self.day_id = None
+		self.date = None
+		self.day_directory = None
+		self.species = None ##for now (ever?) have option to define species on day, in case using animal w/o ID
+		##BrainSlice attributes
+		self.slice_id = None
+		self.slice_id_short = None
+		self.slice_directory = None
 		self.slice_rig_time = None
-		self.animal_ID_list = fetch_existing_values('animal', 'animal_ID')
+		self.fixation_well_id = ''
+		self.fixed_orientation = None
+		self.plane = None
+		##Site attributes
+		self.site_id = None
+		self.site_directory = None
+		self.region = None
+		self.external_solution = None
 
-		ttk.Label(mainframe, text="base").grid(column=0, row=0)
-		ttk.Label(mainframe, text="active").grid(column=0, row=1)
-		ttk.Button(mainframe, text="new day", command=self.new_day_up).grid(column=0, row=2)
-		
-		ttk.Label(mainframe, text="animal ID:").grid(column=0,row=3)
-		self.animalIDvar = StringVar()
-		self.animalID = ttk.Combobox(mainframe, textvariable=self.animalIDvar, width=10, postcommand=self.fetch_animals)
-		self.animalID.grid(column=0, row=4)
-		self.animalID['values'] = self.animal_ID_list
+	def set_base_dir(self, path):
+		"""Set base directory to indicated path. Reset attributes."""
+		path = string_to_path(path)
+		assert path.exists(), f"Base directory must already exist. {path} not found."
+		self.base_directory = path
+		self.active_directory = path
+		self.new_dir_time = datetime.now()
+		self.reset_attr("day")
 
+	def reset_attr(self, level):
+		"""Reset attributes associated with given level and all child levels."""
+		if level == 'day':
+			self.animal_id = None
+			self.project = None
+			self.day_id = None
+			self.date = None
+			self.day_directory = None
+			self.species = None
+			self.reset_attr(level='slice')
+		if level == 'slice':
+			self.slice_id = None
+			self.slice_id_short = None
+			self.slice_directory = None
+			self.slice_rig_time = None
+			self.fixation_well_id = ''
+			self.fixed_orientation = None
+			self.plane = None
+			self.reset_attr(level='site')
+		if level == 'site':
+			self.site_directory = None
+			self.site_id = None
+			self.region = None
+			self.external_solution = None
 
-		ttk.Label(mainframe, text="species:").grid(column=0, row=5)
-		self.speciesvar = StringVar()
-		species = ttk.Combobox(mainframe, textvariable=self.speciesvar, width=10)
-		species.grid(column=0,row=6)
-		species['values'] = species_list
-		
-		ttk.Label(mainframe, text="project:").grid(column=0, row=7)
-		self.projectvar = StringVar()
-		project = ttk.Combobox(mainframe, textvariable=self.projectvar, width=10)
-		project.grid(column=0,row=8)
-		project['values'] = project_list
+	def make_new_folder(self, path):
+		"""Makes a new folder of the given Path. Sets the Path as the active directory and records the time."""
+		path.mkdir()
+		self.active_directory = path
+		self.new_dir_time = datetime.now()
 
-		base_entry = ttk.Entry(mainframe, textvariable=self.base_dir, width=38)
-		base_entry.grid(column=1, row=0, sticky=(W,E), columnspan=3)
-		ttk.Entry(mainframe, textvariable=self.active_dir, width=38).grid(column=1, row=1, columnspan=3)
-		ttk.Button(mainframe, text="new slice", command=self.new_slice_up).grid(column=1, row=2)
-		ttk.Label(mainframe, text="slice ID:").grid(column=1,row=3)
-		self.sliceIDvar = StringVar()
-		sliceID = ttk.Combobox(mainframe, textvariable=self.sliceIDvar, width=10)
-		sliceID.grid(column=1, row=4)
-		sliceID['values'] = slice_id_list
-		ttk.Label(mainframe, text="PFA well:").grid(column=1, row=5)
-		self.wellIDvar = StringVar()
-		wellID = ttk.Combobox(mainframe, textvariable=self.wellIDvar, width=10)
-		wellID.grid(column=1, row=6)
-		wellID['values'] = ('not fixed', 'A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4', 'C1', 'C2', 'C3', 'C4')
-		ttk.Label(mainframe, text="orientation:").grid(column=1, row=7)
-		self.orientationvar = StringVar()
-		orientation = ttk.Combobox(mainframe, textvariable=self.orientationvar, width=10)
-		orientation.grid(column=1, row=8)
-		orientation['values'] = ('not flipped', 'flipped', 'unsure')
-
-
-		ttk.Label(mainframe, text="external:").grid(column=2, row=5)
-		self.externalIDvar = StringVar()
-		external = ttk.Combobox(mainframe, textvariable=self.externalIDvar, width=10)
-		external.grid(column=2, row=6)
-		external['values'] = ext_soln_list
-
-		ttk.Label(mainframe, text="region:").grid(column=2, row=7)
-		self.regionVar = StringVar()
-		region = ttk.Combobox(mainframe, textvariable=self.regionVar, width=10)
-		region.grid(column=2, row=8)
-		region['values'] = brain_region_list
-
-		ttk.Button(mainframe, text="set base", command=self.base_up).grid(column=4, row=0)
-		
-		self.HS0_var = IntVar()
-		self.HS1_var = IntVar()
-		HS0_cb = ttk.Checkbutton(mainframe, text='HS0', variable=self.HS0_var).grid(column=2,row=3)
-		HS1_cb = ttk.Checkbutton(mainframe, text='HS1', variable=self.HS1_var).grid(column=2,row=4)
-		
-		ttk.Button(mainframe, text="new site", command=self.new_site_up).grid(column=2, row=2)
-		ttk.Label(mainframe, text="pipette:").grid(column=3,row=2)
-		ttk.Label(mainframe, text="subregion:").grid(column=4, row=2)
-		ttk.Label(mainframe, text="reporter:").grid(column=5, row=2)
-		self.pip_sol_0 = StringVar()
-		self.pip_sol_1 = StringVar()
-		pipette0_cb = ttk.Combobox(mainframe, textvariable=self.pip_sol_0, width=5)
-		pipette0_cb.grid(column=3, row=3)
-		pipette1_cb = ttk.Combobox(mainframe, textvariable=self.pip_sol_1, width=5)
-		pipette1_cb.grid(column=3, row=4)
-		pipette0_cb['values'] = pip_soln_list
-		pipette1_cb['values'] = pip_soln_list
-
-		self.subregion_0 = StringVar()
-		self.subregion_1 = StringVar()
-		subregion0_cb = ttk.Combobox(mainframe, textvariable=self.subregion_0, width=5)
-		subregion0_cb.grid(column=4, row=3)
-		subregion1_cb = ttk.Combobox(mainframe, textvariable=self.subregion_1, width=5)
-		subregion1_cb.grid(column=4, row=4)
-		
-		subregion0_cb['values'] = subregion_list
-		subregion1_cb['values'] = subregion_list
-
-		self.reporter_0 = StringVar()
-		self.reporter_1 = StringVar()
-		reporter_list = ('negative', 'positive')
-		reporter0_cb = ttk.Combobox(mainframe, textvariable=self.reporter_0, width = 5)
-		reporter0_cb.grid(column=5, row=3)
-		reporter0_cb['values'] = reporter_list
-		reporter1_cb = ttk.Combobox(mainframe, textvariable=self.reporter_1, width = 5)
-		reporter1_cb.grid(column=5, row=4)
-		reporter1_cb['values'] = reporter_list
-		
-		ttk.Button(mainframe, text="man. update", command = self.set_cwd_manual).grid(column=4, row=1)
-		ttk.Button(mainframe, text="save metadata", command = self.save_meta_button).grid(column=5, row=0)
-		ttk.Button(mainframe, text="move files", command = self.copy_files_button).grid(column=5, row=1)
-		ttk.Button(mainframe, text="DMD", command=self.launch_dmd).grid(column=5, row=7)
-		ttk.Button(mainframe, text="notepad", command = self.launch_np).grid(column=5, row=8)
-		self.directory_level='base' ##can be 'base', 'day', 'slice', 'site'
-		self.label_to_var_dict = {'animal_ID':self.animalIDvar,
-									'species':self.speciesvar,
-									'project':self.projectvar,
-									'slice_ID':self.sliceIDvar,
-									'well_ID':self.wellIDvar,
-									'slice_rig_time':self.slice_rig_time,
-									'orientation':self.orientationvar,
-									'external_solution':self.externalIDvar,
-									'region':self.regionVar
-
-		}
-
-	def fetch_animals(self):
-		self.animal_ID_list = fetch_existing_values('animal', 'animal_ID')
-		self.animalID['values'] = self.animal_ID_list
-
-
-	def launch_np(self):
-		notepad_window = Toplevel(self.root)
-		NotepadApp = NotepadGUI(notepad_window, self)
-
-	def launch_dmd(self):
-		dmd_window = Toplevel(self.root)
-		dmdApp = DmdGUI(dmd_window, self)
-
-	def return_slice_ID(self):
+	def make_new_day(self, i=0, animal_id=None, project=None, save_current=True):
 		"""
-		Returns full sliceID (with animal ID preceeding)
+		Makes a new directory with today's date. Sets it as working directory.
+
+		Arguments:
+			i (iterative integer): defaults to 0. If a folder already exists with passed value, iterate to next integer.
 		"""
-		slice_ID = self.animalIDvar.get()+'.slice-'+self.sliceIDvar.get()
-		return slice_ID
-
-	def return_site_ID(self):
-		"""
-		Returns full siteID (with animal ID and slice ID preceding)
-		"""
-		if self.directory_level == 'site':
-			slice_ID = self.return_slice_ID()
-			site_ID = slice_ID+'.'+self.active_dir.get()[-8:]
-			return site_ID
-		else:
-			return None
-
-	def save_meta_button(self):
-		slice_ID = self.return_slice_ID()
-		site_ID = self.return_site_ID()
-		phys_file_path = self.active_dir.get()
-		site_dict = self.collect_site_data()
-		upload_md('site', site_dict)
-		update_md('site.json', site_dict)
-		if self.HS0_var.get():
-			cell0_dict = {
-			'site_ID': site_ID,
-			'cell_ID': site_ID+'.HS0',
-			'headstage': 0,
-			'phys_file_path': phys_file_path,
-			'target_region': self.subregion_0.get(),
-			'pipette_solution': self.pip_sol_0.get(),
-			'reporter_status': self.reporter_0.get()
-			}
-			update_md('cell0.json', cell0_dict)
-			upload_md('cell', cell0_dict, col_match='cell_ID')
-		if self.HS1_var.get():
-			cell1_dict = {
-			'site_ID': site_ID,
-			'cell_ID': site_ID+'.HS1',
-			'headstage': 1,
-			'phys_file_path': phys_file_path,
-			'target_region': self.subregion_1.get(),
-			'pipette_solution': self.pip_sol_1.get(),
-			'reporter_status': self.reporter_1.get()
-			}
-			update_md('cell1.json', cell1_dict)
-			upload_md('cell', cell1_dict, col_match='cell_ID')
-		slice_dict = self.collect_slice_data()
-		slice_json_path = self.slice_directory+r"\slice.json"
-		update_md(slice_json_path, slice_dict)
-		upload_md('slice', slice_dict)
-				
-	def base_up(self):
-		target_base = self.base_dir.get()
-		target_base = target_base.strip('\"')
-		os.chdir(target_base)
-		self.directory_level = 'base'	
-	
-	def new_day_up(self):
-		make_new_day(base_dir=self.base_dir.get().strip('\"'))
-		self.update_active()
-		self.day_directory = os.getcwd()
-		self.directory_level = 'day'
-	
-	def new_slice_up(self):
-		if self.directory_level == 'day':
-			day_dict = self.collect_day_data()
-			day_json_path = self.day_directory+r"\day.json"
-			upload_md('day', day_dict)
-			update_md(day_json_path, day_dict)
-			animal_dict = self.collect_animal_data()
-			upload_md('animal', animal_dict, col_match='animal_ID')
-		
-		if self.directory_level == 'slice':
-			slice_dict = self.collect_slice_data()
-			upload_md('slice', slice_dict)
-			update_md('slice.json', slice_dict)
-
-		if self.directory_level == 'site':
-			slice_dict = self.collect_slice_data()
-			upload_md('slice', slice_dict)
-			slice_json_path = self.slice_directory+r"\slice.json"
-			update_md(slice_json_path, slice_dict)
-			site_dict = self.collect_site_data()
-			upload_md('site', site_dict)
-			update_md('site.json', site_dict)
-
-		self.sliceIDvar.set('')
-		self.wellIDvar.set('')
-		self.orientationvar.set('')
-
-		self.reset_cell_info()
-		
-		make_new_slice()
-		self.update_active()
-		self.slice_rig_time = self.new_dir_time
-		self.slice_directory = os.getcwd()
-		self.directory_level = 'slice'
-
-	def new_site_up(self):
-		##slice information may have been updated, collect and store
-		slice_dict = self.collect_slice_data()
-		upload_md('slice', slice_dict)
-		slice_json_path = self.slice_directory+r"\slice.json"
-		update_md(slice_json_path, slice_dict)
-		if self.directory_level == 'site':
-			site_dict = self.collect_site_data()
-			upload_md('site', site_dict)
-			update_md('site.json', site_dict)
-		self.reset_cell_info()
-		make_new_site()
-		self.directory_level = 'site'
-		self.update_active()
-		site_ID = self.return_site_ID()
-		phys_file_path = self.active_dir.get()
-		site_dict = self.collect_site_data()
-		upload_md('site', site_dict)
-		update_md('site.json', site_dict)
-		
-
-	def collect_day_data(self):
-		day_dict = {
-		'animal_ID': self.animalIDvar.get(),
-		'species': self.speciesvar.get(),
-		'phys_file_path': self.day_directory,
-		'project': self.projectvar.get()
-		}
-		return day_dict
-
-	def collect_animal_data(self):
-		animal_dict = {
-		'animal_ID': self.animalIDvar.get(),
-		'species': self.speciesvar.get(),
-		}
-		return animal_dict
-	
-	def collect_slice_data(self):
-		slice_ID = self.return_slice_ID()
-		##make slice_rig_time human format
-		t=time.localtime(self.slice_rig_time)
-		slice_time = time.strftime("%Y-%m-%d %H:%M:%S", t)
-		slice_dict = {
-		'slice_ID': slice_ID,
-		'animal_ID': self.animalIDvar.get(),
-		'well_ID': self.wellIDvar.get(),
-		'phys_file_path': self.slice_directory,
-		'slice_rig_time': slice_time,
-		'well_ID': self.wellIDvar.get(),
-		'orientation' :self.orientationvar.get()
-		}
-		return slice_dict
-
-	def collect_site_data(self):
-		slice_ID = self.return_slice_ID()
-		site_ID = self.return_site_ID()
-		phys_file_path = self.active_dir.get()
-		site_dict = {
-		'slice_ID':slice_ID ,
-		'phys_file_path': phys_file_path,
-		'site_ID': site_ID,
-		'external_solution':self.externalIDvar.get(),
-		'region':self.regionVar.get()
-		}
-		return site_dict
-	
-	def update_active(self):
-		self.active_dir.set(os.getcwd())
-		self.new_dir_time = time.time()
-	
-	def set_cwd_manual(self):
-		target_wd = self.active_dir.get()
-		target_wd = target_wd.strip('\"')
-		os.chdir(target_wd)
-		self.new_dir_time = time.time()
-		target_wd = Path(target_wd)
-		if target_wd.parts[-1][-8:-4] == 'site':
-			self.slice_directory = target_wd.parents[0]
-			self.day_directory = target_wd.parents[1]
-			self.directory_level = 'site'
-		elif target_wd.parts[-1][-9:-4] == 'slice':
-			self.slice_directory = target_wd
-			self.day_directory = target_wd.parents[0]
-			self.directory_level = 'slice'
-		elif target_wd.parts[-1][:2] == '20':
-			##bit clumsy solution. Try to come up with something before. At least before 2100.
-			self.day_directory = target_wd
+		assert self.base_directory, 'base directory is not defined'
+		day_directory_id = str(date.today())+f"-{i:03}"
+		day_path = self.base_directory/day_directory_id
+		if not day_path.exists():
+			if save_current and self.directory_level != 'base': ##don't try to save something that's note there.
+				self.save_data_model(model_level="current", gsheet=True)
+			self.reset_attr('day')
+			self.reset_attr('slice')
+			self.make_new_folder(day_path)
 			self.directory_level = 'day'
+			self.day_directory = day_path
+			self.day_id = day_directory_id
+			self.date = date.today()
+			##if animal_id is not given, make (hopefully temp) animal_id from day_id
+			##example: 2024-02-09-003 => 'A20240209003'
+			if animal_id is None:
+				animal_id = 'A'+day_directory_id.replace('-','')
+			self.animal_id = animal_id
+			self.project = project
+			
 		else:
-			print("warning - manual directory not recognized as day, slice or site folder")
-		existing_dict = self.find_existing_metadata_json()
-		for k, v in existing_dict.items():
-			if k in self.label_to_var_dict.keys():
-				obj_var = self.label_to_var_dict[k]
-				obj_var.set(v)
-		self.root.update_idletasks()
+			i += 1
+			self.make_new_day(i=i, animal_id=animal_id, project=project)
+
+	def make_new_slice(self, i=0, slice_id='', save_current=True):
+		"""
+		Makes a new slice directory with current day directory. 
+		Sets new slice folder as working directory.
+
+		Arguments:
+			i (iterative integer): defaults to 0. If a folder already exists with passed value, iterate to next integer.
+			slice_id: defaults to an empty string. slice_id is intended to be unique to physical slice and include the 
+			parent animal_id of the format A1234.sag_003. This will be distinct from the folder name generated by this function.
+		"""
+		if i > 999:  ##should not have 1000 slices
+			raise ValueError('slice i greater than 1000 not supported')
+		assert self.day_directory, "Cannot make a new slice directory if day directory is undefined."
+		slice_path = self.day_directory/(f"slice-{i:03}") ##slice number padded to 3 digits
+		if not slice_path.exists(): #make new directory and set path if it doesn't exist
+			if save_current:
+				self.save_data_model(model_level="current", gsheet=True)
+			self.reset_attr('slice')
+			self.reset_attr('site')
+			self.make_new_folder(slice_path)
+			self.directory_level = "slice"
+			self.slice_directory = 	slice_path
+			##if slice_id is not given, make (hopefully temporary) slice_id 
+			##from slice_directory
+			if slice_id == '':
+				slice_id = self.slice_directory.stem
+			self.slice_id = self.animal_id+"."+slice_id
+			self.slice_rig_time = self.new_dir_time
+		else:					#if path exists, increase slice number
+			i += 1
+			self.make_new_slice(i, slice_id=slice_id)
+
+	def make_new_site(self, i=0, save_current=True):
+		"""
+		Makes a new site directory within current slice directory. 
+		Sets new site folder as working directory.
+
+		Arguments:
+			i (iterative integer): defaults to 0. 
+			If a folder already exists with passed value, iterate to next integer.
+
+		"""
+		if i > 999:
+			raise ValueError('site i greater than 1000 not supported')
+		assert self.day_directory, "Cannot make a new site directory if day directory is undefined."
+		assert self.slice_directory, "Cannot make a new site directory if slice directory is undefined."
+		site_name = f"site-{i:03}"
+		site_path = self.slice_directory/site_name
+		if not site_path.exists():
+			if save_current:
+				self.save_data_model(model_level="current", gsheet=True)
+			self.reset_attr('site')
+			self.make_new_folder(site_path)
+			self.directory_level = 'site'
+			self.site_directory = site_path
+			self.site_id = self.slice_id+"."+site_name
+		else:
+			i+=1
+			self.make_new_site(i)
+
+	def copy_files_src_list(self):
+		"""Copies files that have been modified after active directory creation to active directory.
+		src_list could be list of default directories used by DAQ software"""
+		for src in self.src_list:
+			self.copy_files_since_tstamp(src)
+		process_nwb_in_dir(directory=self.active_directory)
+
+	def copy_files_since_tstamp(self, src, tstamp=None, dst=None):
+		"""Copies all files modified after time (tstamp) from source directory (src) to destination directory (dst)."""
+		if tstamp is None:
+			tstamp = self.new_dir_time
+		if dst is None:
+			dst = self.active_directory
+		src = string_to_path(src)
+		assert src.exists(), f"source directory {src} does not exist."
+		for file in src.iterdir():
+			last_mod = last_mod_datetime(file)
+			if last_mod > self.new_dir_time:
+				shutil.copy2(file, dst)
+
+	def predict_level_from_path(self, path):
+		"""Predict directory level from folder names in Path object."""
+		if path.parts[-1][-8:-4] == 'site':
+			return 'site'
+		elif path.parts[-1][-9:-4] == 'slice':
+			return 'slice'
+		elif path.parts[-1][:2] == '20':
+			##bit clumsy solution. todo: come up with something better. At least before 2100.
+			return 'day'
+		else:
+			print(f"warning - path {path} not recognized as day, slice or site folder")
+			return ''
+
+	def set_existing_dir(self, path, directory_level=None):
+		"""Set active directory to an existing directory (path) and import metadata from a json (if present)."""
+		path = string_to_path(path)
+		assert path.exists(), f"target directory {path} does not exist."
+		self.active_directory = path
+		self.new_dir_time = datetime.now()
+		if directory_level is None:
+			directory_level = self.predict_level_from_path(path)
+		self.directory_level = directory_level
+		self.reset_attr(directory_level)
+		json_file_name = self.directory_level + ".json"
+		if Path(self.active_directory/json_file_name).exists():
+			## validate json as pydantic model
+			existing_model = self.build_model_from_json()
+			model_dict = existing_model.model_dump()
+			self.set_meta_attr(model_dict)
+			
 
 
-	def find_existing_metadata_json(self):
-		'''Look for existing json file with name consistent with current directory level. e.g. "slice.json"'''
-		directory_level_list = ['day', 'slice', 'site']
-		assert self.directory_level in directory_level_list, f"directory level {self.directory_level} is not in {directory_level_list}"
-		json_file_name = self.directory_level + '.json'
-		existing_dict = {}
-		try:
-			with open(json_file_name) as f:
-				existing_dict=json.load(f)
-		except:
-			print (f"{json_file_name} not found when looking for existing metadata json")
-		return existing_dict
+	def set_meta_attr(self, meta_dict):
+		"""Set metadata attributes received as a dictionary (e.g. from user entry on a GUI), 
+		including nested dictionaries."""
+		for k, v in meta_dict.items():
+			if isinstance(v, dict):
+				self.set_meta_attr(v)
+			elif k in vars(self) and v != '':
+				self.__setattr__(k, v)
 
-	def copy_files_button(self):
-		dst = os.getcwd()
-		for src in src_list:
-			copy_files_since_tstamp(self.new_dir_time, src, dst)
-		parse_abf_in_dir(dst, site_ID=self.return_site_ID())
-		process_nwb_in_dir()
+	def find_existing_meta_json(self):
+		"""If json file with name matching current directory level is found, return as dictionary."""
+		json_file_name = self.directory_level + ".json"
+		existing_meta_dict = {}
+		if Path(self.active_directory/json_file_name).exists():
+			with open(self.active_directory/json_file_name) as f:
+				existing_meta_dict = json.load(f)
+		else:
+			print (f"{json_file_name} not found")
+		return existing_meta_dict
 
-	def reset_cell_info(self):
-		self.HS0_var.set(0)
-		self.HS1_var.set(0)
-		self.subregion_0.set('')
-		self.pip_sol_0.set('')
-		self.reporter_0.set('')
-		self.subregion_1.set('')
-		self.pip_sol_1.set('')
-		self.reporter_1.set('')
-
-def last_mod_time(fname):
-	return os.path.getmtime(fname)
-
-def copy_files_since_tstamp(tstamp, src, dst):
-	src = os.path.abspath(src)
-	for fname in os.listdir(src):
-		src_fname = os.path.join(src, fname)
-		if last_mod_time(src_fname) > tstamp:
-			print(f"{src_fname} is recent")
-			dst_fname = os.path.join(dst, fname)
-			shutil.copy(src_fname, dst_fname)
-
-
-
-
-
-if __name__ == '__main__':
-	root = Tk()
-	app = DirectoryGUI(root)
-	image_window = Toplevel(root)
-	ImageApp = ImageGUI(image_window, app)
+	def build_model_from_json(self):
+		"""Return pydantic model based on existing json"""
+		existing_meta_dict = self.find_existing_meta_json()
+		if self.directory_level == 'day':
+			model_out = SliceRecDay(**existing_meta_dict)
+		if self.directory_level == 'slice':
+			model_out = BrainSlice(**existing_meta_dict)
+		if self.directory_level == 'site':
+			model_out = RecordingSite(**existing_meta_dict)
+		return model_out
 	
-	root.mainloop()
+	def build_model(self, model_level=None, meta_dict=None):
+		"""
+		Build pydantic data model (or nested models) from attributes of DirectoryManager. 
+		Defaults to current/active level, but can be specified with model_level.
+		"""
+		assert self.directory_level in ['day', 'slice', 'site'], f"{self.directory_level} invalid directory level"
+		dl_to_hier_dict = {'day':0, 'slice':1, 'site': 2}
 
+		if meta_dict == None:
+			meta_dict = self.__dict__
 
+		if model_level == None:
+			model_level = self.directory_level
 
+		model_hier = dl_to_hier_dict[model_level]
+		if model_hier >= 0:
+			animal_model = Animal(**meta_dict)
+			day_model = SliceRecDay(animal=animal_model, **meta_dict)
+			model_out = day_model
+		if model_hier >= 1:
+			slice_model = BrainSlice(slice_rec_day=day_model, **meta_dict)
+			model_out = slice_model
+		if model_hier >= 2:
+			site_model = RecordingSite(brain_slice=slice_model, **meta_dict)
+			model_out = site_model
+		return model_out
 
+	def save_data_model(self, model_level="current", gsheet=False):
+		"""Save models that correspond to directories as json and optionally send to google spreadsheet."""
+		if model_level == "current":
+			model_level = self.directory_level
+		assert model_level in ['day', 'slice', 'site'], f"model level undefined and {self.directory_level} invalid directory level"
+		data_model = self.build_model(model_level=model_level)
+		self.data_model_to_json(data_model, model_level)
+		if gsheet:
+			try:
+				data_model.gs_upload()
+			except:
+				print (f"upload to google spreadsheet not supported by data model {data_model}")
+
+	def save_cell_data_model(self, cell_model, gsheet=False):
+		"""Save RecordedCell data model to JSON and optionally google sheet."""
+		jsonfile = "cell"+str(cell_model.headstage)+".json"
+		dir_path = self.site_directory
+		with open(dir_path/jsonfile, "w") as f:
+			f.write(cell_model.model_dump_json(indent=4))
+		if gsheet:
+			try:
+				cell_model.gs_upload()
+			except:
+				print (f"upload to google spreadsheet not supported by data model {cell_model}")
+
+	def data_model_to_json(self, data_model, model_level):
+		"""Save data model corresponding to a directory (day, slice, site) to json file."""
+		jsonfile = model_level+".json"
+		if model_level in ["day", "slice", "site"]:
+			dir_name = model_level+"_directory"
+		elif model_level == 'cell':
+			dir_name = "site_directory"
+		else:
+			print (f"model_level {model_level} not supported. Accepted levels are day, slice, site.")
+		dir_path = getattr(self, dir_name)
+		with open(dir_path/jsonfile, "w") as f:
+			f.write(data_model.model_dump_json(indent=4))
+
+			
+	def build_and_save_cell_model(self, HS, ext_dict, gsheet=False):
+		cell_model = self.build_cell_model(HS, ext_dict)
+		self.save_cell_data_model(cell_model, gsheet)
+
+	def build_cell_model(self, HS, ext_dict=None):
+		"""Create a RecordedCell data model using attributes of DirectoryManager
+		and ext_dict (likely received from GUI)"""
+		assert self.site_id, "Cannot create cell model without site_id."
+		site_id = self.site_id
+		cell_id = site_id + ".HS" + str(HS)
+		site_directory = self.site_directory
+		recording_site = self.build_model('site')
+		cell_model = RecordedCell(cell_id=cell_id, site_id=site_id, 
+			site_directory=site_directory, recording_site=recording_site, 
+			headstage=HS, **ext_dict)
+		return cell_model
+
+	
+
+def string_to_path(path):
+	"""Return a pathlib Path object from entered path. 
+	Converts to path from string if needed."""
+	if isinstance(path, PurePath):
+		return path
+	elif isinstance(path, str):
+		path = Path(r'{}'.format(path))
+		return path
+
+def last_mod_datetime(file):
+	"""Return a datetime object representing the last time file was modified."""
+	if isinstance(file, PurePath) == False:
+		file = string_to_path(file)
+	mod_datetime = datetime.fromtimestamp(file.lstat().st_mtime)
+	return mod_datetime

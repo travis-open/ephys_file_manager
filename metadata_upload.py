@@ -1,28 +1,13 @@
 import gspread
-#from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 from config import gsheet_key
 import json
 import numpy as np
 
+
 gc = gspread.service_account(filename='mycredentials.json')
 
 gsheet = gc.open_by_key(gsheet_key)
-
-
-def np_array_to_list(meta_dict):
-	"""
-	Convert any np arrays within a dictionary to list to facilitate json writing
-	"""
-	for k, v in meta_dict.items():
-		if type(v) == np.ndarray:
-			meta_dict[k] = v.tolist()
-	return meta_dict
-
-def all_values_to_str(meta_dict):
-	for k, v in meta_dict.items():
-		meta_dict[k] = str(v)
-	return meta_dict
 
 def update_md(filepath, meta_dict):
 	"""
@@ -59,24 +44,27 @@ def upload_md(sheet_name, meta_dict, force_append=False, col_match='phys_file_pa
 		col_match: key in meta_dict used to find row in spreadsheet with matching value
 	"""
 
-	sheet=gsheet.worksheet(sheet_name)
-	df=pd.DataFrame(sheet.get_all_records())
+	sheet = gsheet.worksheet(sheet_name)
+	df = pd.DataFrame(sheet.get_all_records())
 	
 	if force_append is True:
-		entry_row=df.shape[0]+2
+		entry_row = df.shape[0]+2
 	else:
-		col_match_value=meta_dict[col_match]
-		col_match_col=df.columns.get_loc(col_match)+1 ##+1 as gspread starts with 1
-		existing_cell=sheet.find(col_match_value, in_column=col_match_col)
-		matching_cells=df[col_match].values == col_match_value
+		col_match_value = meta_dict[col_match]
+		col_match_col = df.columns.get_loc(col_match)+1 ##+1 as gspread starts with 1
+		existing_cell = sheet.find(col_match_value, in_column=col_match_col)
+		matching_cells = df[col_match].values == col_match_value
 		if np.sum(matching_cells) <1:
-			entry_row=df.shape[0]+2
+			entry_row = df.shape[0]+2
 		else:
 			entry_row=matching_cells.argmax()+2
 	for key, value in meta_dict.items():
-		if value != '': ##don't overwrite existing data with missing data
+		if key in df.columns and value != '': ##don't overwrite existing data with missing data
+			value = str(value)  ##convert objects like dates and Paths to str to please gspread
 			col=df.columns.get_loc(key)+1
 			sheet.update_cell(entry_row, col, value)
+
+
 
 def fetch_existing_values(sheet_name, col_name):
 	"""
