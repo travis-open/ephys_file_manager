@@ -4,6 +4,10 @@ from config import gsheet_key
 import json
 import numpy as np
 
+## mycredentials.json and gsheet_key are not shared on github to some mystery alive.
+## setup instructions here: https://docs.gspread.org/en/latest/oauth2.html
+## reach out to Travis if you'd like to use this but have questions.
+
 
 gc = gspread.service_account(filename='mycredentials.json')
 
