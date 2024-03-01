@@ -134,6 +134,8 @@ class ExpControlGUI(object):
 
 
 	def copy_files_button(self):
+		self.store_gui_data()
+		dm.save_data_model(model_level="current", gsheet=True)
 		self.dm.copy_files_src_list()
 
 	def manual_update_button(self):
@@ -153,18 +155,21 @@ class ExpControlGUI(object):
 		self.dm.make_new_day(save_current=True)
 		self.active_dir.set(dm.active_directory)
 		self.update_gui_from_dir_manager()
+		self.clear_cells_gui()
 	
 	def new_slice_button(self):
 		self.store_gui_data()
 		self.dm.make_new_slice(save_current=True)
 		self.active_dir.set(dm.active_directory)
 		self.update_gui_from_dir_manager()
+		self.clear_cells_gui()
 	
 	def new_site_button(self):
 		self.store_gui_data()
 		self.dm.make_new_site(save_current=True)
 		self.active_dir.set(dm.active_directory)
 		self.update_gui_from_dir_manager()
+		self.clear_cells_gui()
 
 	def store_gui_data(self):
 		dir_dict = self.collect_all_dir_data()
@@ -227,7 +232,7 @@ class ExpControlGUI(object):
 		return dir_dict
 
 	def collect_cell0_data(self):
-		assert HS0_var.get(), "headstage 0/HS0_var not set as active"
+		assert self.HS0_var.get(), "headstage 0/HS0_var not set as active"
 		cell0_dict = {
 		"recording_site": self.subregion_var0.get(),
 		"pipette_solution": self.pip_sol_var0.get(),
@@ -236,13 +241,24 @@ class ExpControlGUI(object):
 		return cell0_dict
 
 	def collect_cell1_data(self):
-		assert HS1_var.get(), "headstage 1/HS1_var not set as active"
+		assert self.HS1_var.get(), "headstage 1/HS1_var not set as active"
 		cell1_dict = {
 		"recording_site": self.subregion_var1.get(),
 		"pipette_solution": self.pip_sol_var1.get(),
 		"reporter_status": self.reporter_var1.get()
 		}
 		return cell1_dict
+
+	def clear_cells_gui(self):
+		self.HS0_var.set(0)
+		self.HS1_var.set(0)
+		self.subregion_var0.set('')
+		self.subregion_var1.set('')
+		self.pip_sol_var0.set('')
+		self.pip_sol_var1.set('')
+		self.reporter_var0.set('')
+		self.reporter_var1.set('')
+		self.root.update_idletasks()
 
 	def launch_np(self):
 		notepad_window = Toplevel(self.root)

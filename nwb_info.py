@@ -1,5 +1,7 @@
 import json
 import glob
+import gc
+import h5py
 from pathlib import Path
 from metadata_upload import upload_md
 from neuroanalysis.data.loaders.mies_dataset_loader import MiesNwbLoader
@@ -28,8 +30,8 @@ def process_nwb(nwbfilename):
             site_dict = json.load(json_file)
             site_id = site_dict['site_id']
     except:
-        site_ID = "unknown"
-    meta_dict['site_id']=site_id
+        site_id = "unknown"
+    meta_dict['site_id'] = site_id
     upload_md('nwb', meta_dict, force_append=True)
 
 def process_nwb_in_dir(directory=None):
@@ -41,6 +43,14 @@ def process_nwb_in_dir(directory=None):
     else:
         for f in nwb_list:
             process_nwb(f)
+
+    close_h5py()
+
+def close_h5py():
+    for obj in gc.get_objects():
+        if isinstance(obj, h5py.File):
+            print (f"closing h5py object {obj.filename}.")
+            obj.close()
 
 if __name__ == '__main__':
     #hs_list, stim_list=pull_hs_stimset('basic_nwb_v2.nwb')
