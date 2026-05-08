@@ -1,5 +1,6 @@
-from tkinter import ttk, N, W, E, S, IntVar, StringVar
-from umanager import core, DMD, find_StimSequences
+from tkinter import ttk, N, W, E, S, IntVar, StringVar, messagebox
+import umanager
+from umanager import DMD, find_StimSequences
 
 class DmdGUI(object):
 	def __init__(self, root, parent):
@@ -7,8 +8,8 @@ class DmdGUI(object):
 		self.root = root
 		self.root.title("DMD control")
 		self.directory_manager = self.parent.dm
-		self.dmd = DMD(core, directory_manager=self.directory_manager)
-		self.StimSet_directory = 'C:/stimset_building/'
+		self.dmd = DMD(umanager.core, directory_manager=self.directory_manager)
+		self.StimSet_directory = 'C:/Users/tahage/photostim_generation/'
 		mainframe = ttk.Frame(self.root, padding = "3 3 12 12")
 		mainframe.grid(column=0, row=0, sticky=(N, W, E, S))
 
@@ -92,17 +93,19 @@ class DmdGUI(object):
 		self.order_combo = ttk.Combobox(mainframe, textvariable=self.order_var, postcommand=self.get_orders)
 		self.order_combo.grid(column=3, row=1)
 
-		ttk.Button(mainframe, text='all pixels on', command=self.dmd.all_pixels_on).grid(column=2, row=4)
+		ttk.Button(mainframe, text='all pixels on', command=self.dmd.all_dmd_pixels_on).grid(column=2, row=4)
+		ttk.Button(mainframe, text='all pixels off', command=self.dmd.all_dmd_pixels_off).grid(column=2, row=5)
+
 		ttk.Button(mainframe, text='run current seq', command=self.run_current_seq).grid(column=0, row=sp_row_start+6)
 		ttk.Button(mainframe, text='load seq', command=self.load_seq_dmd_gui).grid(column=3, row=4)
-		ttk.Button(mainframe, text='stop', command=self.dmd.stop_sequence).grid(column=2, row=5)
+		ttk.Button(mainframe, text='stop', command=self.dmd.stop_sequence).grid(column=2, row=6)
 		ttk.Button(mainframe, text='load frame', command=self.load_frame_dmd_gui).grid(column=3, row=5)
 
 		self.load_state_text = StringVar(value='no seq loaded')
 		self.load_state = ttk.Label(mainframe, textvariable=self.load_state_text).grid(column=3, row=3)
 
-		self.start_mies_var = IntVar()
-		mies_cb = ttk.Checkbutton(mainframe, text='start MIES', variable=self.start_mies_var).grid(column=1,row=6, padx=10)
+		#self.start_mies_var = IntVar()
+		#mies_cb = ttk.Checkbutton(mainframe, text='start MIES', variable=self.start_mies_var).grid(column=1,row=6, padx=10)
 
 
 	def load_seq_dmd_gui(self):
@@ -129,11 +132,14 @@ class DmdGUI(object):
 		seq_int = self.seq_interval_var.get()
 		sweep_reps = self.sweep_reps_var.get()
 		order_name = self.order_var.get()
-		start_mies = self.start_mies_var.get()
-		assert seq_int > isi*reps + dur, f"seq interval cannot be shorter than pulse reps * pulse interval. Increase to at least {reps*isi+dur}"
-		stim_dict = self.dmd.collect_dmd_params(self.dmd.current_stim_sequence, order_name, 
+		if seq_int <= isi*reps + dur:
+			messagebox.showerror("Parameter error",
+				f"Sequence interval must be > pulse reps × pulse interval + duration. "
+				f"Increase seq interval to at least {reps*isi+dur+1} ms.")
+			return
+		stim_dict = self.dmd.collect_dmd_params(self.dmd.current_stim_sequence, order_name,
 			stim_amp=amp, stim_duration=dur, repeatCnt=reps, isi=isi, seq_int=seq_int)
-		self.dmd.run_current_sequence(stim_dict, sweep_reps, start_mies)
+		self.dmd.run_current_sequence(stim_dict, sweep_reps)
 
 	def update_dmd_current_ss(self, event):
 		StimSet_filepath = self.StimSet_directory+self.SSS_var.get()+'.pickle'
@@ -144,3 +150,8 @@ class DmdGUI(object):
 		order_list = list(stim_sequence_dict.keys())
 		self.order_combo.configure(value=order_list)
 		return order_list
+
+	def update_connection(self, core):
+		"""Re-attach DMD to a freshly reconnected Micro-Manager instance."""
+		self.dmd.reinitialize(core)
+		self.load_state_text.set('no seq loaded')

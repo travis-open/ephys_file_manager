@@ -1,10 +1,11 @@
-from tkinter import ttk, Tk, IntVar, StringVar, N, W, E, S, Toplevel
+from tkinter import ttk, Tk, IntVar, StringVar, N, W, E, S, Toplevel, messagebox
 from notepad import NotepadGUI
 from dmd_gui import DmdGUI
 from image_gui import ImageGUI
-from metadata_upload import fetch_existing_values
+##from metadata_upload import fetch_existing_values
 from file_manager import DirectoryManager
 from config import default_base_dir, species_list, project_list, slice_id_list, fix_well_list, ext_soln_list, brain_region_list, subregion_list, pip_soln_list
+import umanager
 
 class MetaComboBox(object):
 	def __init__(self, mainframe, text, tkVar, loc, values_list=[], width=10):
@@ -40,6 +41,15 @@ class ExpControlGUI(object):
 		ttk.Button(mainframe, text="new day", command=self.new_day_button).grid(column=0, row=2)
 		ttk.Button(mainframe, text="new slice", command=self.new_slice_button).grid(column=1, row=2)
 		ttk.Button(mainframe, text="new site", command=self.new_site_button).grid(column=2, row=2)
+
+		self.mm_status_var = StringVar()
+		self.mm_status_var.set('MM: connected' if umanager.core is not None else 'MM: not connected')
+		ttk.Label(mainframe, textvariable=self.mm_status_var).grid(column=3, row=5, columnspan=2)
+		ttk.Button(mainframe, text="reconnect MM", command=self.reconnect_mm).grid(column=3, row=6, columnspan=2)
+
+		# References to open subwindow instances, used to propagate reconnect
+		self.image_app = None
+		self.dmd_app = None
 		
 		self.animal_id_var = StringVar()
 		ttk.Label(mainframe, text='animal ID:').grid(column=0, row=3)
@@ -117,25 +127,24 @@ class ExpControlGUI(object):
 
 	def save_meta_button(self):
 		self.store_gui_data()
-		dm.save_data_model(model_level="current", gsheet=True)
+		self.dm.save_data_model(model_level="current", gsheet=True)
 		if self.HS0_var.get():
 			cell0_dict = {
 			'target_region':self.subregion_var0.get(),
 			'pipette_solution':self.pip_sol_var0.get(),
 			'reporter_status':self.reporter_var0.get()}
-			cell_model = dm.build_cell_model(0, ext_dict=cell0_dict)
-			dm.build_and_save_cell_model(0, ext_dict=cell0_dict, gsheet=True)
+			self.dm.build_and_save_cell_model(0, ext_dict=cell0_dict, gsheet=True)
 		if self.HS1_var.get():
 			cell1_dict = {
 			'target_region':self.subregion_var1.get(),
 			'pipette_solution':self.pip_sol_var1.get(),
 			'reporter_status':self.reporter_var1.get()}
-			dm.build_and_save_cell_model(1, ext_dict=cell1_dict, gsheet=True)
+			self.dm.build_and_save_cell_model(1, ext_dict=cell1_dict, gsheet=True)
 
 
 	def copy_files_button(self):
 		self.store_gui_data()
-		dm.save_data_model(model_level="current", gsheet=True)
+		self.dm.save_data_model(model_level="current", gsheet=True)
 		self.dm.copy_files_src_list()
 
 	def manual_update_button(self):
@@ -153,21 +162,21 @@ class ExpControlGUI(object):
 
 	def new_day_button(self):
 		self.dm.make_new_day(save_current=True)
-		self.active_dir.set(dm.active_directory)
+		self.active_dir.set(self.dm.active_directory)
 		self.update_gui_from_dir_manager()
 		self.clear_cells_gui()
-	
+
 	def new_slice_button(self):
 		self.store_gui_data()
 		self.dm.make_new_slice(save_current=True)
-		self.active_dir.set(dm.active_directory)
+		self.active_dir.set(self.dm.active_directory)
 		self.update_gui_from_dir_manager()
 		self.clear_cells_gui()
-	
+
 	def new_site_button(self):
 		self.store_gui_data()
 		self.dm.make_new_site(save_current=True)
-		self.active_dir.set(dm.active_directory)
+		self.active_dir.set(self.dm.active_directory)
 		self.update_gui_from_dir_manager()
 		self.clear_cells_gui()
 
@@ -260,13 +269,35 @@ class ExpControlGUI(object):
 		self.reporter_var1.set('')
 		self.root.update_idletasks()
 
+	def reconnect_mm(self):
+		"""Attempt to reconnect to Micro-Manager and refresh all open subwindows."""
+		success, err = umanager.connect_micromanager()
+		if success:
+			self.mm_status_var.set('MM: connected')
+			if self.image_app is not None:
+				self.image_app.update_connection(umanager.core, umanager.studio)
+			if self.dmd_app is not None:
+				self.dmd_app.update_connection(umanager.core)
+		else:
+			self.mm_status_var.set('MM: not connected')
+			messagebox.showerror("Micro-Manager", f"Could not connect to Micro-Manager:\n{err}")
+
+	def set_image_app(self, image_app):
+		"""Register the ImageGUI instance so it can be updated on reconnect."""
+		self.image_app = image_app
+
 	def launch_np(self):
 		notepad_window = Toplevel(self.root)
 		NotepadApp = NotepadGUI(notepad_window, self)
 
 	def launch_dmd(self):
 		dmd_window = Toplevel(self.root)
-		dmdApp = DmdGUI(dmd_window, self)
+		self.dmd_app = DmdGUI(dmd_window, self)
+		dmd_window.protocol("WM_DELETE_WINDOW", lambda: self._close_dmd(dmd_window))
+
+	def _close_dmd(self, window):
+		self.dmd_app = None
+		window.destroy()
 
 
 
@@ -276,6 +307,6 @@ if __name__ == '__main__':
 	app = ExpControlGUI(root, dm)
 	image_window = Toplevel(root)
 	ImageApp = ImageGUI(image_window, app)
-	
-	
+	app.set_image_app(ImageApp)
+
 	root.mainloop()
