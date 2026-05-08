@@ -19,7 +19,7 @@ class DmdGUI(object):
 		spinbox_width = 5
 
 		sp_row_start = 0 ##shutter params row start
-		ttk.Label(mainframe, text='amplitude:').grid(column=0, row=sp_row_start+0)
+		ttk.Label(mainframe, text='amplitude (%):').grid(column=0, row=sp_row_start+0)
 		self.amp_var = IntVar(value=10)
 		amp_spin = ttk.Spinbox(
 			mainframe,
@@ -29,7 +29,7 @@ class DmdGUI(object):
 			width=spinbox_width)
 		amp_spin.grid(column=1, row=sp_row_start+0)
 
-		ttk.Label(mainframe, text='duration:').grid(column=0, row=sp_row_start+1)
+		ttk.Label(mainframe, text='duration (ms):').grid(column=0, row=sp_row_start+1)
 		self.dur_var = IntVar(value=1)
 		dur_spin = ttk.Spinbox(
 			mainframe, 
@@ -50,7 +50,7 @@ class DmdGUI(object):
 			width=spinbox_width)
 		reps_spin.grid(column=1, row=sp_row_start+2)
 
-		ttk.Label(mainframe, text='pulse interval:').grid(column=0, row=sp_row_start+3)
+		ttk.Label(mainframe, text='pulse interval (ms):').grid(column=0, row=sp_row_start+3)
 		self.ISI_var = IntVar(value=20)
 		ISI_spin = ttk.Spinbox(
 			mainframe,
@@ -60,7 +60,7 @@ class DmdGUI(object):
 			width=spinbox_width)
 		ISI_spin.grid(column=1, row=sp_row_start+3)
 
-		ttk.Label(mainframe, text='seq interval:').grid(column=0, row=sp_row_start+4)
+		ttk.Label(mainframe, text='seq interval (ms):').grid(column=0, row=sp_row_start+4)
 		self.seq_interval_var = IntVar(value=100)
 		seq_int_spin = ttk.Spinbox(
 			mainframe,
@@ -104,8 +104,8 @@ class DmdGUI(object):
 		self.load_state_text = StringVar(value='no seq loaded')
 		self.load_state = ttk.Label(mainframe, textvariable=self.load_state_text).grid(column=3, row=3)
 
-		#self.start_mies_var = IntVar()
-		#mies_cb = ttk.Checkbutton(mainframe, text='start MIES', variable=self.start_mies_var).grid(column=1,row=6, padx=10)
+		self.stim_id_var = StringVar(value='stim: 0')
+		ttk.Label(mainframe, textvariable=self.stim_id_var).grid(column=1, row=6, padx=10)
 
 
 	def load_seq_dmd_gui(self):
@@ -140,6 +140,7 @@ class DmdGUI(object):
 		stim_dict = self.dmd.collect_dmd_params(self.dmd.current_stim_sequence, order_name,
 			stim_amp=amp, stim_duration=dur, repeatCnt=reps, isi=isi, seq_int=seq_int)
 		self.dmd.run_current_sequence(stim_dict, sweep_reps)
+		self.stim_id_var.set(f'stim: {self.dmd.stim_id}')
 
 	def update_dmd_current_ss(self, event):
 		StimSet_filepath = self.StimSet_directory+self.SSS_var.get()+'.pickle'
