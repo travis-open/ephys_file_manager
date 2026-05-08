@@ -1,4 +1,4 @@
-from tkinter import ttk, Tk, IntVar, StringVar, N, W, E, S, Toplevel, messagebox
+from tkinter import ttk, Tk, IntVar, StringVar, N, W, E, S, Toplevel, messagebox, filedialog
 from notepad import NotepadGUI
 from dmd_gui import DmdGUI
 from image_gui import ImageGUI
@@ -28,15 +28,15 @@ class ExpControlGUI(object):
 		self.base_dir = StringVar()
 		self.base_dir.set(self.dm.base_directory)
 		ttk.Label(mainframe, text="base").grid(column=0, row=0)
-		base_entry = ttk.Entry(mainframe, textvariable=self.base_dir, width=38)
+		base_entry = ttk.Entry(mainframe, textvariable=self.base_dir, width=38, state='readonly')
 		base_entry.grid(column=1, row=0, sticky=(W,E), columnspan=3)
 		ttk.Button(mainframe, text="set base", command=self.base_update).grid(column=4, row=0)
 
 		self.active_dir = StringVar()
 		ttk.Label(mainframe, text="active").grid(column=0, row=1)
-		active_entry = ttk.Entry(mainframe, textvariable=self.active_dir, width=38)
+		active_entry = ttk.Entry(mainframe, textvariable=self.active_dir, width=38, state='readonly')
 		active_entry.grid(column=1, row=1, columnspan=3)
-		ttk.Button(mainframe, text="man. update", command = self.manual_update_button).grid(column=4, row=1)
+		ttk.Button(mainframe, text="set active", command = self.manual_update_button).grid(column=4, row=1)
 
 		ttk.Button(mainframe, text="new day", command=self.new_day_button).grid(column=0, row=2)
 		ttk.Button(mainframe, text="new slice", command=self.new_slice_button).grid(column=1, row=2)
@@ -148,13 +148,21 @@ class ExpControlGUI(object):
 		self.dm.copy_files_src_list()
 
 	def manual_update_button(self):
-		target_dir = self.active_dir.get()
+		target_dir = filedialog.askdirectory(title="Select active directory",
+			initialdir=self.dm.active_directory or self.dm.base_directory)
+		if not target_dir:
+			return
 		self.dm.set_existing_dir(target_dir)
+		self.active_dir.set(self.dm.active_directory)
 		self.update_gui_from_dir_manager()
 
 	def base_update(self):
-		target_base = self.base_dir.get()
+		target_base = filedialog.askdirectory(title="Select base directory",
+			initialdir=self.dm.base_directory)
+		if not target_base:
+			return
 		self.dm.set_base_dir(target_base)
+		self.base_dir.set(self.dm.base_directory)
 
 	def fetch_animals(self):
 		self.animal_ID_list = fetch_existing_values('animal', 'animal_id')
