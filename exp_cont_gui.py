@@ -2,6 +2,7 @@ from tkinter import ttk, Tk, IntVar, StringVar, N, W, E, S, Toplevel, messagebox
 from notepad import NotepadGUI
 from dmd_gui import DmdGUI
 from image_gui import ImageGUI
+from fluorescence_gui import FluorescenceGUI
 ##from metadata_upload import fetch_existing_values
 from file_manager import DirectoryManager
 from config import default_base_dir, species_list, project_list, slice_id_list, fix_well_list, ext_soln_list, brain_region_list, subregion_list, pip_soln_list
@@ -50,6 +51,7 @@ class ExpControlGUI(object):
 		# References to open subwindow instances, used to propagate reconnect
 		self.image_app = None
 		self.dmd_app = None
+		self.fluoro_app = None
 		
 		self.animal_id_var = StringVar()
 		ttk.Label(mainframe, text='animal ID:').grid(column=0, row=3)
@@ -118,6 +120,7 @@ class ExpControlGUI(object):
 		ttk.Button(mainframe, text="move files", command = self.copy_files_button).grid(column=5, row=1)
 		ttk.Button(mainframe, text="notepad", command = self.launch_np).grid(column=5, row=8)
 		ttk.Button(mainframe, text="DMD", command=self.launch_dmd).grid(column=5, row=7)
+		ttk.Button(mainframe, text="fluorescence", command=self.launch_fluorescence).grid(column=5, row=6)
 
 
 		self.field_to_var = {'animal_id':self.animal_id_var, 'species':self.species_var,
@@ -286,6 +289,8 @@ class ExpControlGUI(object):
 				self.image_app.update_connection(umanager.core, umanager.studio)
 			if self.dmd_app is not None:
 				self.dmd_app.update_connection(umanager.core)
+			if self.fluoro_app is not None:
+				self.fluoro_app.update_connection(umanager.core)
 		else:
 			self.mm_status_var.set('MM: not connected')
 			messagebox.showerror("Micro-Manager", f"Could not connect to Micro-Manager:\n{err}")
@@ -307,14 +312,19 @@ class ExpControlGUI(object):
 		self.dmd_app = None
 		window.destroy()
 
+	def launch_fluorescence(self):
+		fluoro_window = Toplevel(self.root)
+		self.fluoro_app = FluorescenceGUI(fluoro_window, parent=self)
+		fluoro_window.protocol("WM_DELETE_WINDOW", lambda: self._close_fluorescence(fluoro_window))
+
+	def _close_fluorescence(self, window):
+		self.fluoro_app = None
+		window.destroy()
+
 
 
 if __name__ == '__main__':
 	root = Tk()
 	dm = DirectoryManager()
 	app = ExpControlGUI(root, dm)
-	image_window = Toplevel(root)
-	ImageApp = ImageGUI(image_window, app)
-	app.set_image_app(ImageApp)
-
 	root.mainloop()

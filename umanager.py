@@ -20,6 +20,8 @@ from file_manager import get_next_abf
 import tkinter as tk
 from tkinter import messagebox
 
+import tkinter as tk
+from tkinter import messagebox
 
 core = None
 studio = None
@@ -102,21 +104,23 @@ def snap_image():
 	studio.live().set_live_mode(live_mode) #reset live mode
 	return image, md
 
-def snap_save_image(dir_path):
+def snap_save_image(dir_path, filename_stem=None):
 	'''
 	Snap micro-manager image with all current settings. Save as tiff and save json with associated metadata.
-	Returns the name of the tiff file.
+	filename_stem: base name without extension (e.g. "DAPI_40X_20260513_143022").
+	               Defaults to "img_<unix_timestamp>" if not provided.
+	Returns the Path of the saved tiff file.
 	'''
 	image, md = snap_image()
-	filename = "img_"+str(int(time.time()))
-	tfile = filename+'.tif'
-	jsonfile = filename+'.json'
+	if filename_stem is None:
+		filename_stem = "img_" + str(int(time.time()))
 	dir_path = Path(dir_path)
-	tifffile.imwrite(dir_path/tfile, image)
-	with open(dir_path/jsonfile, 'a') as f:
-		f.write(json.dumps(md, indent=4))
-		f.close()
-	return dir_path/tfile
+	tfile = filename_stem + '.tif'
+	jsonfile = filename_stem + '.json'
+	tifffile.imwrite(dir_path / tfile, image)
+	with open(dir_path / jsonfile, 'w') as f:
+		json.dump(md, f, indent=4)
+	return dir_path / tfile
 
 def load_stim_sequence_file(filename):
     with open(filename, 'rb') as file:
